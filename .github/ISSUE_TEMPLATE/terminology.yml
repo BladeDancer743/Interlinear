@@ -1,0 +1,38 @@
+name: Terminology or domain contribution
+description: Correct a term or propose a reviewed domain reference
+title: "[Terminology] "
+labels:
+  - terminology
+body:
+  - type: input
+    id: domain
+    attributes:
+      label: Domain
+      placeholder: Quantum error correction
+    validations:
+      required: true
+  - type: input
+    id: term
+    attributes:
+      label: English term and variants
+    validations:
+      required: true
+  - type: input
+    id: chinese
+    attributes:
+      label: Proposed Chinese label
+    validations:
+      required: true
+  - type: textarea
+    id: explanation
+    attributes:
+      label: Contextual explanation
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Authoritative sources
+      description: Prefer original papers, standards, canonical textbooks, or official documentation
+    validations:
+      required: true

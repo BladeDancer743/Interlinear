@@ -1,0 +1,4 @@
+interface:
+  display_name: "Interlinear"
+  short_description: "Annotate technical papers with inline Chinese explanations"
+  default_prompt: "Use $interlinear to annotate this technical paper for an intermediate reader with concise Chinese explanations."

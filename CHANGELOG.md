@@ -2,9 +2,36 @@
 
 All notable changes to the Interlinear skill will be documented in this file.
 
+## [4.0.0] — 2026-07-28
+
+### Added
+
+- Portable installable skill at `interlinear/`
+- Progressive references for acquisition, annotation policy, geometric intuition, and quantum terminology
+- Codex UI metadata generated from the skill contract
+- Repository validator for structure, links, privacy, SVG safety, and terminology metrics
+- Architecture, evaluation, domain-extension, and release documentation
+- Branded repository presentation and community health files
+
+### Changed
+
+- Reduced the always-loaded skill from 744 lines to 164 lines
+- Normalized the skill name to lowercase `interlinear`
+- Limited YAML frontmatter to the portable `name` and `description` contract
+- Replaced hardcoded export paths with the user-selected directory or current workspace
+- Corrected misleading quantum analogies and several brittle terminology definitions
+- Updated installation guidance for Codex, Claude Code, and OpenCode through the Skills CLI
+- Corrected documentation to report the 64 source-controlled quantum term families
+
+### Removed
+
+- Platform-specific tool declarations from portable skill metadata
+- Unsupported claims of 200+ or 350+ bundled terms
+
 ## [3.3.0] — 2026-07-28
 
 ### Added
+
 - Geometric mode depth slider (brief/normal/deep) with per-annotation length targets
 - Term-type → image-source auto-mapping table (11 semantic categories)
 - Geometric-specific QC checklist (7 items) in §7.5
@@ -14,6 +41,7 @@ All notable changes to the Interlinear skill will be documented in this file.
 ## [3.2.0] — 2026-07-28
 
 ### Added
+
 - Figure caption / table / section heading / code block / appendix annotation rules (§5)
 - Second-pass missed term detection (§7.4) with ≥5 threshold alert
 - User feedback → knowledge base suggestion loop (§7.3)
@@ -25,6 +53,7 @@ All notable changes to the Interlinear skill will be documented in this file.
 ## [3.1.0] — 2026-07-28
 
 ### Added
+
 - Paywalled journal auto-detection with arXiv preprint redirect (§1.2)
 - Coverage: Nature, Science, APS, Springer, IEEE, Elsevier, ACM, IOP, AIP
 - Fallback to Google Scholar search when arXiv not found
@@ -32,17 +61,20 @@ All notable changes to the Interlinear skill will be documented in this file.
 ## [3.0.0] — 2026-07-28
 
 ### Added
+
 - Geometric intuition mode (§4.4) with 5-tier image source priority
 - 18 annotated term examples for geometric mode
 - Phase 0.1b: explanation style selection (definitional vs geometric)
 - Phase 0 interaction protocol: reader level + reading scope
 
 ### Changed
+
 - Title from "paper-zh-annotator" to "Interlinear"
 
 ## [2.0.0] — 2026-07-28
 
 ### Added
+
 - 7-layer pipeline architecture (input → discovery → assessment → retrieval → injection → output → QA)
 - 6-level input priority chain (arxiv-vanity → ar5iv → HTML → abstract → journal → pdfplumber)
 - Dual-track term discovery: knowledge base + pattern matching (6 patterns)
@@ -51,7 +83,7 @@ All notable changes to the Interlinear skill will be documented in this file.
 - 3-level confidence labeling (✅⚠️🔍)
 - Long paper chunking strategy (section-by-section + cumulative glossary)
 - Quality assurance: factuality check + consistency check + user feedback loop
-- Knowledge base expanded from 200 → 350+ terms
+- Expanded and reorganized the quantum terminology reference
 - False-friend detection (gate, channel, code, state, measurement)
 - Mathematical notation handling
 - Section-by-section iterative reading support
@@ -59,9 +91,10 @@ All notable changes to the Interlinear skill will be documented in this file.
 ## [1.0.0] — 2026-07-27
 
 ### Added
+
 - Initial release
 - 5-category decision engine
-- 200-term quantum computing knowledge base
+- Initial quantum-computing terminology reference
 - Inline `【翻译：解释】` annotation format
 - Format A (inline) and Format B (glossary-first) output modes
 - Deduplication and density control rules

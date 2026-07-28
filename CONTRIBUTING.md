@@ -1,74 +1,93 @@
 # Contributing to Interlinear
 
-Thanks for your interest in improving Interlinear. Here's how to contribute.
+Interlinear improves when a correction is concrete, sourced, and reproducible.
 
-## Ways to Contribute
+## Useful contributions
 
-### 🧠 Add Terms to the Knowledge Base
+- Correct a mistranslated or misleading term.
+- Report an annotation that changes the paper's meaning.
+- Replace a weak analogy with a faithful mental model.
+- Add a legally shareable regression excerpt.
+- Extend terminology support to another technical domain.
+- Improve agent compatibility, validation, or documentation.
 
-The quantum computing terminology knowledge base in SKILL.md is never complete. To add terms:
+## Before opening a pull request
 
-1. Find the right category section in `SKILL.md` → `领域术语知识库`
-2. Add a new line: `- {english term} → {中文翻译}（{语境解释}）`
-3. If the term is an abbreviation, add it to the parent section with the full form
-4. Submit a PR with the paper or resource where you found the term
+1. Search existing issues and pull requests.
+2. Keep one conceptual change per pull request.
+3. Cite a primary paper, standard, canonical textbook, or authoritative documentation for factual terminology changes.
+4. Do not commit credentials, personal paths, downloaded paper PDFs, or substantial copyrighted excerpts.
+5. Run:
 
-### 🖼️ Add Geometric Intuition Examples
+   ```bash
+   python -m pip install -r requirements-dev.txt
+   python scripts/validate_skill.py
+   ```
 
-The geometric mode (SKILL.md §4.4) benefits from expanding the example table. To add:
+6. If Node.js is available, verify discovery:
 
-1. Find or invent a geometric/visual explanation for a quantum computing concept
-2. Add it to the examples table in §4.4 (geometric intuition mode)
-3. Follow the template: `| **{term}** | {image description in Chinese, ≤40 chars} |`
-4. Priority order: geometric → information flow → energy landscape → network → mechanics
+   ```bash
+   npx skills add . --list
+   ```
 
-### 🌐 Extend to a New Domain
+## Change the right layer
 
-To adapt Interlinear for another field (e.g., cryptography, bioinformatics, ML):
+| Change | Location |
+|:--|:--|
+| Triggering or core workflow | `interlinear/SKILL.md` |
+| Selection, placement, or confidence rules | `interlinear/references/annotation-policy.md` |
+| URL, DOI, PDF, or long-paper handling | `interlinear/references/paper-acquisition.md` |
+| Visual explanation rules | `interlinear/references/geometric-intuition.md` |
+| Quantum terminology | `interlinear/references/quantum-terminology.md` |
+| New recurring domain | New file under `interlinear/references/` plus one routing line in `SKILL.md` |
 
-1. Fork the repo
-2. Add a new section under `领域术语知识库` with 30-50 core terms
-3. Add 3-5 false-friend terms specific to the new domain (§2, pattern table)
-4. Add 5+ geometric intuition examples for the new domain's key concepts (§4.4)
-5. Add domain-specific abbreviation detection patterns if needed
-6. Submit a PR with the source papers/textbooks you referenced
+Keep `SKILL.md` under 500 lines. Prefer one-hop references over adding every detail to the always-loaded core.
 
-### 🐛 Improve the Decision Engine
+## Terminology pull requests
 
-The decision engine (§2-§3) can always be smarter:
+Include:
 
-- Better false-friend detection rules
-- New term discovery patterns
-- Smarter density control heuristics
-- Improved reader level filtering
+- source term and accepted variants;
+- proposed Chinese label;
+- a one-sentence contextual explanation;
+- the source and relevant section or page;
+- whether the wording is established, disputed, or paper-specific.
 
-Changes here should be backed by concrete examples from real papers.
+Avoid time-sensitive hardware metrics unless the source date is part of the entry.
 
-### 📝 Improve Documentation
+## Behavior pull requests
 
-- Clarify ambiguous rules in SKILL.md
-- Add more annotated paper examples to README
-- Fix typos, improve Chinese translations
-- Add English translations for non-Chinese-speaking users
+Provide:
 
-## PR Guidelines
+1. A short source excerpt or a public link and section.
+2. Reader level and explanation mode.
+3. Before output.
+4. After output.
+5. Why the new behavior generalizes.
 
-1. Keep changes focused — one type of change per PR
-2. For terminology additions, cite the source (paper/book title + page)
-3. For decision engine changes, include before/after examples
-4. Chinese is the primary language. English is welcome for code and non-Chinese documentation.
-5. Run `git log --oneline` to check your commit message style matches the repo.
+Use the rubric in [Evaluation](docs/evaluation.md).
 
-## Commit Convention
+## Commit style
 
+Use concise Conventional Commit-style messages:
+
+```text
+feat: add condensed-matter terminology reference
+fix: preserve equation subscripts in inline notes
+docs: clarify paywall-safe source handling
+test: add confidence-label regression case
 ```
-feat:     new feature (term additions, new modes, new sections)
-fix:      bug fix (wrong translation, incorrect classification)
-docs:     documentation only
-refactor: code restructure, no behavior change
-style:    formatting, whitespace
-```
 
-## Getting Help
+## Review priorities
 
-Open an issue with the **question** label if you're unsure how to proceed.
+Reviewers prioritize:
+
+1. Source fidelity and factual correctness.
+2. Rights and privacy.
+3. Cross-agent portability.
+4. Context efficiency.
+5. Presentation.
+
+## Community
+
+Be specific and respectful. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

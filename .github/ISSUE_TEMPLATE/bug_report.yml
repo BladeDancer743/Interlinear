@@ -1,0 +1,64 @@
+name: Annotation bug
+description: Report an incorrect, misleading, or inconsistent annotation
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share only a short excerpt or public link. Do not upload a paper you are not allowed to redistribute.
+  - type: input
+    id: source
+    attributes:
+      label: Paper source
+      description: URL, DOI, or a precise title and section
+      placeholder: "https://arxiv.org/abs/... · §2.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: Reader level
+      options:
+        - basic
+        - intermediate
+        - advanced
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Explanation mode
+      options:
+        - definition
+        - geometric intuition
+    validations:
+      required: true
+  - type: textarea
+    id: excerpt
+    attributes:
+      label: Short source excerpt
+      description: Include only the minimum text needed to reproduce the issue
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual annotation
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected correction and evidence
+      description: Link an authoritative source when the dispute is factual
+    validations:
+      required: true
+  - type: checkboxes
+    id: rights
+    attributes:
+      label: Source handling
+      options:
+        - label: I have not included credentials, private data, or a substantial copyrighted excerpt.
+          required: true

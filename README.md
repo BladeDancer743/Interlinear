@@ -1,149 +1,176 @@
-# Interlinear：技术论文行间注释器
+<p align="center">
+  <img src="docs/assets/interlinear-hero.svg" alt="Interlinear — read technical papers without leaving the sentence" width="100%">
+</p>
 
-<div align="center">
+<p align="center">
+  <a href="https://github.com/BladeDancer743/Interlinear/actions/workflows/quality.yml"><img alt="Quality" src="https://img.shields.io/github/actions/workflow/status/BladeDancer743/Interlinear/quality.yml?branch=main&style=flat-square&label=quality"></a>
+  <a href="interlinear/SKILL.md"><img alt="Agent Skill" src="https://img.shields.io/badge/Agent%20Skill-valid-4de1c1?style=flat-square"></a>
+  <a href="CHANGELOG.md"><img alt="Version 4.0.0" src="https://img.shields.io/badge/version-4.0.0-f1c27d?style=flat-square"></a>
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/BladeDancer743/Interlinear?style=flat-square"></a>
+</p>
 
-[![License](https://img.shields.io/github/license/BladeDancer743/Interlinear)](LICENSE)
-[![Version](https://img.shields.io/badge/version-3.3.0-blue)](CHANGELOG.md)
-[![Stars](https://img.shields.io/github/stars/BladeDancer743/Interlinear)](https://github.com/BladeDancer743/Interlinear/stargazers)
-[![Last Commit](https://img.shields.io/github/last-commit/BladeDancer743/Interlinear)](https://github.com/BladeDancer743/Interlinear/commits/main)
+# Interlinear
 
-</div>
+**让 AI 在英文技术论文原句旁，写下真正有用的中文夹注。**
 
-> 读英文论文时，自动在术语旁插入「翻译：解释」，就像古籍的夹注一样。
+Interlinear 是一个跨 agent 的论文阅读 skill。它识别缩写、符号、命名定理和“看似熟悉但语义特殊”的词，在不改写作者论证的前提下插入简短中文解释。
 
-## 这是什么
+它首先服务量子计算论文，也能通过上下文发现机制处理物理、计算机科学和其他技术领域。
 
-用 AI 读技术论文时，最烦的就是满篇缩写和黑话——`NISQ`、`stoquastic`、`FTQC`、`surface code`……每个词都要中断阅读去查。
+## 30 秒看懂
 
-Interlinear 是一个 LLM skill，它会在你读论文时**自动检测**需要解释的术语，在原文行间嵌入简短的 `【中文翻译：一句话解释】`，让你不用离开论文就能读懂。
+原文：
 
-## 快速开始
+> However, noise in quantum gates will limit the size of circuits that can be run reliably, unless quantum error correction is used.
 
-### 1. 安装
+Interlinear：
+
+> However, noise in quantum gates【量子门噪声：实际操作偏离目标变换，使误差随电路累积】 will limit the size of circuits【量子电路：按依赖关系排列的量子操作序列】 that can be run reliably, unless quantum error correction【量子纠错：把逻辑信息编码到更大系统中，通过综合征检测并修正错误】 is used.
+
+它做的不是全文机翻，而是保留英文阅读节奏，专门消除术语造成的认知中断。
+
+## 为什么不是普通翻译
+
+| 能力 | 全文翻译 | 通用总结 | Interlinear |
+|:--|:--:|:--:|:--:|
+| 保留原句和公式 | — | — | ✓ |
+| 只解释真正阻碍理解的词 | — | — | ✓ |
+| 根据读者水平控制密度 | — | — | ✓ |
+| 统一缩写、全称与复现简注 | — | — | ✓ |
+| 区分已验证、推断与待核信息 | — | — | ✓ |
+| 提供定义式与几何直觉式解释 | — | — | ✓ |
+
+## 两种解释模式
+
+| 原词 | 定义式 | 几何直觉式 |
+|:--|:--|:--|
+| `quantum gate` | 作用于量子态的基本控制操作 | 在布洛赫球上精确旋转状态箭头 |
+| `decoherence` | 系统与环境作用导致相干信息不可用 | 相位信息向环境泄漏，状态箭头逐渐缩短 |
+| `Grover's algorithm` | 用振幅放大加速无结构搜索 | 状态在二维子空间中逐步旋向正确答案 |
+
+几何模式会明确标记类比边界，不用“听起来直观但物理上错误”的故事换取易懂。
+
+## 工作方式
+
+```mermaid
+flowchart LR
+    A[论文 / URL / DOI / PDF] --> B[建立论证地图]
+    B --> C[发现术语与符号]
+    C --> D[按读者水平筛选]
+    D --> E[查证并标置信心]
+    E --> F[注入中文夹注]
+    F --> G[一致性与遗漏复查]
+```
+
+- **三档读者水平**：`basic`、`intermediate`、`advanced`
+- **两种解释风格**：定义式、几何直觉式
+- **四种交付方式**：行间注释、术语表、逐节阅读、Markdown 导出
+- **64 个量子术语族**：以源码实际可验证数量为准
+- **渐进加载**：只在需要时加载论文获取、注释规则、几何直觉或量子术语参考
+
+## 安装
+
+### 推荐：Skills CLI
+
+使用开放的 [`skills`](https://github.com/vercel-labs/skills) CLI 自动发现仓库中的 `interlinear` skill：
 
 ```bash
-git clone https://github.com/BladeDancer743/Interlinear.git ~/.claude/skills/Interlinear/
+npx skills add BladeDancer743/Interlinear --skill interlinear -g
 ```
 
-### 2. 使用
+只安装到指定 agent：
 
-在对话中说：
-
-```
-帮我通读这篇论文，加行间注释：https://arxiv.org/abs/1801.00862
-```
-
-或者指定想看的章节：
-
-```
-只看 Preskill NISQ 论文的 §2 和 §6，加上注释
+```bash
+npx skills add BladeDancer743/Interlinear --skill interlinear -g -a codex
+npx skills add BladeDancer743/Interlinear --skill interlinear -g -a claude-code
+npx skills add BladeDancer743/Interlinear --skill interlinear -g -a opencode
 ```
 
----
+### 手动安装
 
-## 效果预览
+复制 [`interlinear/`](interlinear/) 整个目录到对应 agent 的 skills 目录，并保持目录名为 `interlinear`。
 
-### 定义式模式（默认）
+## 使用
 
-**原文：**
+直接给论文、章节或片段：
 
-> Noisy Intermediate-Scale Quantum (NISQ) technology will be available in the near future. Quantum computers with 50-100 qubits may surpass classical computers, but noise will limit circuit sizes.
-
-**带注释后：**
-
-> Noisy Intermediate-Scale Quantum (NISQ) technology will be available in the near future【Preskill 写于2018年，2019 年 Google Sycamore 兑现了这个预测】. Quantum computers with 50-100 qubits may surpass classical computers, but noise in quantum gates【量子门噪声：操作误差导致量子信息退化，使电路结果不可靠】 will limit the size of circuits【量子电路：量子门操作构成的有向无环图，深度受噪声限制】 that can be run reliably, unless quantum error correction【量子纠错：用多个物理qubit编码一个逻辑qubit，以冗余换取容错——但计算开销巨大】 is used.
-
-### 几何直觉模式
-
-| 术语 | 定义式 | 几何直觉式 |
-|:--|:--|:--|
-| qubit | 可同时处于0和1叠加态的信息单元 | 一个在球面上自由旋转的箭头——北极是0，南极是1，指向任何方向都是合法态 |
-| entanglement | 多粒子间的非经典关联 | 两条绕在一起的绳子，拉一端另一端瞬间同步，不管隔多远 |
-| surface code | 仅需近邻连接的拓扑纠错码 | 一张棋盘格——数据qubit住在格子里，测量qubit站在路口检查邻居是否"打架" |
-| HHL algorithm | 量子矩阵求逆算法 | 在向量空间里把b的方向沿A⁻¹旋转到x的方向——不是暴力解方程，而是"转过去" |
-
----
-
-## 决策器：什么词需要注释？
-
-不是每个术语都注释——注释太多反而干扰阅读。Interlinear 按以下规则自动判断：
-
-| 应该注释 | 不应注释 |
-|:--|:--|
-| 领域专有缩写（NISQ, QEC, BQP） | 作者已在括号里给出全称的缩写 |
-| 外行不懂的技术黑话（stabilizer code, stoquastic） | 高中数学/物理常识（eigenvalue, probability） |
-| 用名字指代的概念（Shor's algorithm, Gottesman-Knill） | 标题中的术语 |
-| 对理解论文核心论证必不可少的概念 | 已在前面注释过的术语（后续用简注 `⤴`） |
-| 领域特有的历史/文化引用（Solvay Conference） | 已在同一句中清晰解释的概念 |
-
-**去重规则**：同一章内，术语只注释首次出现；后续用 `【⤴量子纠错】` 简注。
-
-**密度控制**：每句最多 3 个注释，每段保持至少一半的原文不被注释打断。
-
----
-
-## 注释格式
-
-```
-原文术语【中文翻译：一句话解释】
+```text
+用 $interlinear 通读这篇论文，按 intermediate 难度给摘要和引言加定义式夹注：
+https://arxiv.org/abs/1801.00862
 ```
 
-| 场景 | 格式 |
-|:--|:--|
-| 缩写首次出现 | `NISQ【含噪中等规模量子：50~几百 qubit，有噪声，不做纠错】` |
-| 概念首次出现 | `decoherence【退相干：量子系统与外界环境交互导致量子信息丢失】` |
-| 人名指代 | `Shor's algorithm【Shor 算法：多项式时间分解大整数的量子算法】` |
-| 同一概念再现 | `QEC【⤴量子纠错】` |
-
----
-
-## 内置知识库
-
-目前内置完整的**量子计算**术语知识库，覆盖 200+ 术语，分八大类：
-
-- 量子计算核心概念（qubit, entanglement, decoherence...）
-- 量子纠错（QEC, surface code, stabilizer, threshold...）
-- 量子算法（Shor, Grover, QAOA, VQE, HHL...）
-- 复杂度理论（BQP, NP-hard, quantum supremacy...）
-- 硬件平台（superconducting, trapped ion, topological...）
-- 量子信息与密码（QKD, PQC, QRAM, no-cloning...）
-- 数学工具（Hamiltonian, tensor network, SDP...）
-- 物理概念（quantum chaos, Gibbs state, Majorana...）
-
-扩展到其他领域：在 SKILL.md 的「领域术语知识库」章节追加即可。
-
----
-
-## 项目结构
-
+```text
+用 $interlinear 解释 §2，只注释阻碍理解的术语；量子门和纠错码使用几何直觉模式。
 ```
+
+```text
+用 $interlinear 检查这段注释有没有误导性的物理类比，并给出修正版。
+```
+
+长论文默认先建立 thesis map，再逐节交付；不会为了“全文处理”把整个 PDF 粗暴塞进一次上下文。
+
+## v4 的结构
+
+```text
 Interlinear/
-├── SKILL.md              # Skill 定义（决策器 + 术语库 + 格式规范）
-├── README.md             # 本文件
-├── LICENSE               # MIT License
-├── CHANGELOG.md           # 版本变更记录
-├── CONTRIBUTING.md        # 贡献指南
-└── .github/
-    ├── workflows/lint.yml # Markdown 自动检查
-    └── ISSUE_TEMPLATE/    # Issue 模板
+├── interlinear/                    # 可安装 skill
+│   ├── SKILL.md                    # 164 行核心工作流
+│   ├── agents/openai.yaml          # Codex UI 元数据
+│   └── references/
+│       ├── annotation-policy.md
+│       ├── geometric-intuition.md
+│       ├── paper-acquisition.md
+│       └── quantum-terminology.md
+├── scripts/validate_skill.py       # 结构、链接、隐私与指标校验
+├── docs/                           # 设计、评测与扩展文档
+└── .github/                        # CI 与社区协作入口
 ```
 
-## 兼容平台
+核心 [`SKILL.md`](interlinear/SKILL.md) 保持短小；详细知识按任务加载，避免每次调用都占用整份术语库。
 
-| 平台 | 安装路径 | 状态 |
-|:--|:--|:--|
-| **Claude Code** | `~/.claude/skills/Interlinear/` | ✅ 原生支持 |
-| **OpenCode** | `~/.opencode/skills/Interlinear/` | ✅ 兼容 |
-| **Codex (OpenAI)** | 导入 SKILL.md 为 prompt | ⚠️ 需手动配置 |
-| **Cursor** | 导入 SKILL.md 为 rule | ⚠️ 需手动配置 |
-| **Gemini CLI** | `~/.gemini/skills/Interlinear/` | ⚠️ 未经测试 |
+## 质量边界
 
-## 相关链接
+Interlinear 会：
 
-- [Changelog](CHANGELOG.md)
-- [贡献指南](CONTRIBUTING.md)
-- [Issue 追踪](https://github.com/BladeDancer743/Interlinear/issues)
+- 保留公式、符号、引用编号和作者原意；
+- 优先使用论文自身定义与权威来源；
+- 对未核实内容标记 `⚠️推断` 或 `🔍待核`；
+- 区分几何类比与真实物理机制；
+- 控制注释密度并进行二次遗漏扫描。
+
+Interlinear 不会：
+
+- 绕过付费墙；
+- 把抓取到的受版权保护论文全文重新发布；
+- 把逻辑量子比特描述为“无错”；
+- 暗示纠缠可以超光速通信；
+- 用虚假的术语数量或能力指标包装项目。
+
+## 项目状态
+
+`v4.0.0` 是一次结构升级：skill 已适配跨 agent 发现规范并通过自动校验，但真实论文覆盖仍在持续扩大。
+
+当前重点：
+
+- 增加可复现的论文片段评测集；
+- 扩充量子之外的领域 reference；
+- 对术语翻译和几何类比建立来源审查；
+- 收集 Claude Code、Codex 与 OpenCode 的实际调用反馈。
+
+## 文档
+
+- [设计与架构](docs/architecture.md)
+- [评测方法](docs/evaluation.md)
+- [扩展新领域](docs/extending-domains.md)
+- [发布流程](docs/releasing.md)
+- [变更记录](CHANGELOG.md)
+
+## 参与贡献
+
+术语修正、误导性类比、漏注案例和新领域词表都很有价值。提交前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+安全或隐私问题请查看 [SECURITY.md](SECURITY.md)，社区行为规范见 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
 
 ## License
 
-MIT — 详见 [LICENSE](LICENSE)
+[MIT](LICENSE)

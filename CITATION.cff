@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If Interlinear supports your research workflow, cite this repository."
+title: "Interlinear: an agent skill for inline Chinese annotation of technical papers"
+type: software
+version: 4.0.0
+date-released: 2026-07-28
+authors:
+  - alias: "BladeDancer743"
+repository-code: "https://github.com/BladeDancer743/Interlinear"
+license: MIT

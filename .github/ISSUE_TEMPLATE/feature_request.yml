@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a concrete improvement to the reading workflow
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Reading problem
+      description: What becomes difficult without this feature?
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Concrete example
+      description: Provide a short prompt, paper type, and desired behavior
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Likely layer
+      options:
+        - Core workflow
+        - Paper acquisition
+        - Annotation policy
+        - Geometric intuition
+        - Agent compatibility
+        - Not sure
+    validations:
+      required: true
