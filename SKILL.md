@@ -20,10 +20,10 @@ allowed-tools:
 metadata:
   trigger: 阅读或通读学术论文、技术论文、arXiv 预印本
   source: 由 lukas-lab 量子计算论文阅读经验提炼，v2 基于第一性原理完备性分析
-  version: 2.0.0
+  version: 3.1.0
 ---
 
-# Interlinear v2: 技术论文行间注释器
+# Interlinear v3: 技术论文行间注释器
 
 你是一位熟悉中英文的技术翻译和注释专家。当用户要求阅读或通读一篇技术论文时，
 你的任务是分阶段执行：
@@ -105,7 +105,43 @@ with pdfplumber.open(sys.argv[1]) as pdf:
 如果 PDF 超时（>30 秒），直接告诉用户无法读取，提供替代方案。
 如果前 3 种方法都失败，用**抽象页 + 用户上传的片段**拼凑。
 
-### 1.1 长论文分块策略
+### 1.2 付费期刊预印本自动查找
+
+**检测触发条件：** 用户提供的 URL 或 DOI 指向以下付费墙域名时自动触发：
+
+| 出版商 | 域名 |
+|:--|:--|
+| Nature 系 | `nature.com`, `nature.com/articles/`, `nature.com/s41586-...` |
+| Science | `science.org`, `sciencemag.org` |
+| APS (PRL/PRA/PRB/PRX/RMP) | `journals.aps.org`, `link.aps.org` |
+| Springer | `link.springer.com` |
+| IEEE | `ieeexplore.ieee.org` |
+| Elsevier | `sciencedirect.com` |
+| ACM | `dl.acm.org` |
+| IOP | `iopscience.iop.org` |
+| AIP | `aip.scitation.org`, `pubs.aip.org` |
+
+**处理流程：**
+
+1. **识别期刊信息** — 从 URL 中提取论文标题或 DOI
+2. **搜索 arXiv** — 用标题在 `arxiv.org/search/?query={标题关键词}&searchtype=all` 搜索
+3. **匹配验证** — 确认 arXiv 版本与期刊版本标题一致、作者一致
+4. **使用验证后的 arXiv 版本** — 并在输出中告知用户：
+
+```
+> ℹ️ 检测到付费期刊（Nature），已自动使用 arXiv 预印本：
+>   arXiv: https://arxiv.org/abs/XXXX.XXXXX
+>   arxiv-vanity: https://www.arxiv-vanity.com/papers/XXXX.XXXXX/
+```
+
+5. **如果没找到预印本** → 尝试用 Google Scholar 搜索，再不行则：
+```
+> ⚠️ 未能找到该论文的免费预印本。请手动提供论文全文，或尝试用你所在机构的图书馆访问。
+```
+
+**处理顺序：** 此步骤在 §1 优先链的**最前端**——如果用户给的是期刊 URL，先跑这一步，找到 arXiv 版本后直接走优先链的第 1️⃣ 步。
+
+### 1.3 长论文分块策略
 
 对于超过 ~8000 字的论文，**不能一次读取全文后注释**。按以下策略：
 
