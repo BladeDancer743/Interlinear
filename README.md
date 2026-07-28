@@ -1,5 +1,14 @@
 # Interlinear：技术论文行间注释器
 
+<div align="center">
+
+[![License](https://img.shields.io/github/license/BladeDancer743/Interlinear)](LICENSE)
+[![Version](https://img.shields.io/badge/version-3.3.0-blue)](CHANGELOG.md)
+[![Stars](https://img.shields.io/github/stars/BladeDancer743/Interlinear)](https://github.com/BladeDancer743/Interlinear/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/BladeDancer743/Interlinear)](https://github.com/BladeDancer743/Interlinear/commits/main)
+
+</div>
+
 > 读英文论文时，自动在术语旁插入「翻译：解释」，就像古籍的夹注一样。
 
 ## 这是什么
@@ -34,13 +43,24 @@ git clone https://github.com/BladeDancer743/Interlinear.git ~/.claude/skills/Int
 
 ## 效果预览
 
+### 定义式模式（默认）
+
 **原文：**
 
 > Noisy Intermediate-Scale Quantum (NISQ) technology will be available in the near future. Quantum computers with 50-100 qubits may surpass classical computers, but noise will limit circuit sizes.
 
 **带注释后：**
 
-> Noisy Intermediate-Scale Quantum (NISQ) technology will be available in the near future【Preskill 写于2018年，2019 年 Google Sycamore 兑现了这个预测】. Quantum computers with 50-100 qubits【量子比特：可同时处于 0 和 1 叠加态的量子信息基本单元】 may surpass classical computers, but noise【量子门噪声：操作误差导致信息退化，是 NISQ 时代最大的限制因素】 will limit circuit sizes【电路规模：指量子电路的深度（时间步数）和宽度（qubit 数）】.
+> Noisy Intermediate-Scale Quantum (NISQ) technology will be available in the near future【Preskill 写于2018年，2019 年 Google Sycamore 兑现了这个预测】. Quantum computers with 50-100 qubits may surpass classical computers, but noise in quantum gates【量子门噪声：操作误差导致量子信息退化，使电路结果不可靠】 will limit the size of circuits【量子电路：量子门操作构成的有向无环图，深度受噪声限制】 that can be run reliably, unless quantum error correction【量子纠错：用多个物理qubit编码一个逻辑qubit，以冗余换取容错——但计算开销巨大】 is used.
+
+### 几何直觉模式
+
+| 术语 | 定义式 | 几何直觉式 |
+|:--|:--|:--|
+| qubit | 可同时处于0和1叠加态的信息单元 | 一个在球面上自由旋转的箭头——北极是0，南极是1，指向任何方向都是合法态 |
+| entanglement | 多粒子间的非经典关联 | 两条绕在一起的绳子，拉一端另一端瞬间同步，不管隔多远 |
+| surface code | 仅需近邻连接的拓扑纠错码 | 一张棋盘格——数据qubit住在格子里，测量qubit站在路口检查邻居是否"打架" |
+| HHL algorithm | 量子矩阵求逆算法 | 在向量空间里把b的方向沿A⁻¹旋转到x的方向——不是暴力解方程，而是"转过去" |
 
 ---
 
@@ -98,10 +118,32 @@ git clone https://github.com/BladeDancer743/Interlinear.git ~/.claude/skills/Int
 
 ```
 Interlinear/
-├── SKILL.md    # Skill 定义（决策器 + 术语库 + 格式规范）
-└── README.md   # 本文件
+├── SKILL.md              # Skill 定义（决策器 + 术语库 + 格式规范）
+├── README.md             # 本文件
+├── LICENSE               # MIT License
+├── CHANGELOG.md           # 版本变更记录
+├── CONTRIBUTING.md        # 贡献指南
+└── .github/
+    ├── workflows/lint.yml # Markdown 自动检查
+    └── ISSUE_TEMPLATE/    # Issue 模板
 ```
+
+## 兼容平台
+
+| 平台 | 安装路径 | 状态 |
+|:--|:--|:--|
+| **Claude Code** | `~/.claude/skills/Interlinear/` | ✅ 原生支持 |
+| **OpenCode** | `~/.opencode/skills/Interlinear/` | ✅ 兼容 |
+| **Codex (OpenAI)** | 导入 SKILL.md 为 prompt | ⚠️ 需手动配置 |
+| **Cursor** | 导入 SKILL.md 为 rule | ⚠️ 需手动配置 |
+| **Gemini CLI** | `~/.gemini/skills/Interlinear/` | ⚠️ 未经测试 |
+
+## 相关链接
+
+- [Changelog](CHANGELOG.md)
+- [贡献指南](CONTRIBUTING.md)
+- [Issue 追踪](https://github.com/BladeDancer743/Interlinear/issues)
 
 ## License
 
-MIT
+MIT — 详见 [LICENSE](LICENSE)
