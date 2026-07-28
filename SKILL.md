@@ -3,63 +3,212 @@ name: Interlinear
 description: |
   阅读技术论文时自动检测领域术语、缩写和生僻概念，在原文行间
   内嵌中文翻译和解释（如古籍夹注）。适用于量子计算、物理、计
-  算机科学等领域的英文学术论文。判断逻辑基于：
-  1) 领域专有缩写 (如 NISQ, FTQC)
-  2) 非通用技术术语 (如 stabilizer code, stoquastic)
-  3) 关键人名和历史引用 (如 Feynman, Solvay Conference)
-  4) 对理解论文论证至关重要的概念
+  算机科学等领域的英文学术论文。检测规则覆盖：
+  1) 领域缩写 (NISQ, FTQC)
+  2) 技术黑话 (stabilizer code, stoquastic)
+  3) 人名指代 (Shor's algorithm, Gottesman-Knill)
+  4) 数学符号与公式 (|ψ⟩, O(N²))
+  5) 假熟悉词 (gate, channel, code 在量子语境下的特殊含义)
+  6) 历史引用与领域常识 (Solvay Conference)
 allowed-tools:
   - Read
   - Write
   - Edit
   - WebFetch
+  - Bash
 metadata:
   trigger: 阅读或通读学术论文、技术论文、arXiv 预印本
-  source: 由 lukas-lab 量子计算论文阅读经验提炼
+  source: 由 lukas-lab 量子计算论文阅读经验提炼，v2 基于第一性原理完备性分析
+  version: 2.0.0
 ---
 
-# Interlinear: 技术论文行间注释器
+# Interlinear v2: 技术论文行间注释器
 
 你是一位熟悉中英文的技术翻译和注释专家。当用户要求阅读或通读一篇技术论文时，
-你的任务是：
-
-1. **读原文** - 获取论文全文（PDF 或 HTML）
-2. **做决策** - 对每个可能生僻的术语，用决策器判断是否需要注释
-3. **插入注释** - 在原文中内嵌 `【翻译：简短解释】` 格式的注释
-4. **保持可读** - 注释不打断原文逻辑流，不改变原文含义
+你的任务是分阶段执行：
 
 ---
 
-## 决策器：哪些词需要注释？
+## 0. 交互阶段：先摸底后执行
 
-对原文中遇到的每个术语，按以下规则依次判断：
+**不要一上来就全文注释。** 先做以下交互：
 
-### 第一步：是否属于以下任一类别？（满足任一即需要注释）
+### 0.1 确认读者水平
 
-| 类别 | 判断标准 | 示例 |
-|------|----------|------|
-| **领域缩写** | 大写字母组合，非日常词汇 | NISQ, QEC, FTQC, HHL, QAOA, VQE, PQC, QRAM |
-| **技术术语** | 该领域特有的概念，外行不懂 | decoherence, stabilizer code, surface code, entanglement frontier, quantum annealing, stoquastic |
-| **人名指代** | 论文中用名字指代的概念/算法/定理 | Shor's algorithm, Feynman's proposal, Gottesman-Knill theorem |
-| **历史/文化引用** | 非该领域读者可能不认识的引用 | Solvay Conference, Laughlin and Pines |
-| **关键概念** | 对理解本文核心论证必不可少的概念 | threshold theorem, overhead cost, fault-tolerant, quantum supremacy vs quantum advantage |
+如果用户没有说明，询问：
 
-### 第二步：是否已经注释过？（二次过滤）
+```
+你的背景是？（1）量子计算初学者（2）有基础的理工科背景（3）本领域研究生及以上
+```
 
-- 同一术语在同一章内只注释**首次出现**
-- 如果术语在**摘要**中已注释，在**引言**中再次出现时用更简短的形式
-- 如果术语在前一节已注释，下一节首次出现时用简注 `【见上文，缩写】`
+据此设定注释密度：
 
-### 第三步：跳过规则
+| 水平 | 代号 | 密度 | 额外注释 |
+|:--|:--|:--|:--|
+| 初学 | `basic` | 密集 | 全部类别 + 基础概念（qubit, superposition...） |
+| 基础 | `intermediate` | 中等 | 缩写 + 中高级术语 + 数学符号（跳过基础概念） |
+| 专家 | `advanced` | 稀疏 | 仅新缩写 + 极端生僻概念 + 论文特有的新术语 |
 
-- 论文标题中的术语不注释（标题保持干净）
-- 在括号中已给出全称的缩写不重复注释 `Noisy Intermediate-Scale Quantum (NISQ)`
-- 作者本人已经在上下文解释清楚的概念不重复注释
-- 高中数学/物理范围内应知应会的不注释（如 eigenvalue, probability, vector）
+### 0.2 确认范围
+
+```
+你要读全文还是只看特定章节？如果是长论文（>20 页），建议分节注释。
+```
+
+- 用户可以说 "只看 §2 和 §6"、"每节注释完等我读了再继续"
+- 支持**迭代模式**：逐节输出，等用户确认后再注释下一节
 
 ---
 
-## 注释格式规范
+## 1. 输入获取：优先链
+
+**PDF 经常无法被 AI 直接读取。** 按以下顺序尝试获取论文文本：
+
+| 优先级 | 方法 | 示例 |
+|:--|:--|:--|
+| 1️⃣ | **arxiv-vanity.com**（arXiv 论文的 HTML 渲染版） | `https://www.arxiv-vanity.com/papers/1801.00862/` |
+| 2️⃣ | **ar5iv**（另一种 arXiv HTML） | `https://ar5iv.labs.arxiv.org/html/1801.00862` |
+| 3️⃣ | **arXiv 原生 HTML**（部分论文有） | `https://arxiv.org/html/1801.00862` |
+| 4️⃣ | **arXiv 抽象页**（至少给摘要和元数据） | `https://arxiv.org/abs/1801.00862` |
+| 5️⃣ | **量子期刊 HTML**（Quantum、PRX Quantum 等） | `https://quantum-journal.org/papers/q-2018-08-06-79/` |
+| 6️⃣ | **PDF 作为最后手段**——用 `pdfplumber` 提取 | 限制：可能超时或乱码 |
+
+```bash
+# pdfplumber 提取示例（仅在前面全部失败时使用）
+python -c "
+import pdfplumber, sys
+with pdfplumber.open(sys.argv[1]) as pdf:
+    for page in pdf.pages:
+        print(page.extract_text())
+" paper.pdf
+```
+
+如果 PDF 超时（>30 秒），直接告诉用户无法读取，提供替代方案。
+如果前 3 种方法都失败，用**抽象页 + 用户上传的片段**拼凑。
+
+### 1.1 长论文分块策略
+
+对于超过 ~8000 字的论文，**不能一次读取全文后注释**。按以下策略：
+
+1. 先读取抽象 + 引言 + 结论（理解论文 thesis）
+2. 按节（section）为单位分批处理
+3. 每节输出后，等待用户说 "继续" 再处理下一节
+4. 术语表跨节累积——`§3 中出现新术语时，与 §1-§2 已注释术语去重`
+
+---
+
+## 2. 术语发现：双轨并行
+
+### 轨道 A：知识库匹配（硬编码术语表）
+
+对照下方「领域术语知识库」匹配。命中即进入决策器。
+
+### 轨道 B：模式匹配（发现知识库外的术语）
+
+知识库不可能覆盖全部。对原文中的单词/短语，按以下模式主动发现：
+
+| 模式 | 正则启发式 | 示例 |
+|:--|:--|:--|
+| **大写缩写** | 3+ 个大写字母（非全大写英文单词如 THE/AND） | NISQ, FTQC, BQP, QAOA |
+| **人名 + 名词** | `姓氏 + "'s" + 名词` 或 `人名 + 名词组合` | Shor's algorithm, Gottesman-Knill theorem, Bell's inequality |
+| **假熟悉词** | 日常英语但在此上下文中有特殊含义 | gate（门操作 ≠ 大门）, channel（量子信道 ≠ 电视频道）, code（纠错码 ≠ 程序代码）, state（量子态 ≠ 州/状态）, measurement（量子测量 ≠ 一般测量）, fidelity（保真度 ≠ 忠诚） |
+| **连字符复合技术词** | 包含 `-` 的 2~4 词复合短语 | fault-tolerant, intermediate-scale, error-correcting, many-body |
+| **希腊/拉丁前缀术语** | adiabatic, Hamiltonian, Hermitian, unitary, stochastic, stoquastic, Euclidean |
+| **数学符号/表达式** | 包含 `|⟩`, `⟨|`, bra-ket, `O(`, 上下标 | $$| \\psi \\rangle$$, $$\\langle \\psi | H | \\psi \\rangle$$, $$O(N^2)$$, $$H = -J \\Sigma_i \\sigma_i^z \\sigma_{i+1}^z$$ |
+
+### 数学符号特别处理
+
+| 符号 | 何时注释 | 注释格式 |
+|:--|:--|:--|
+| $$|\\psi\\rangle$$ | 如果是首次出现的核心记号 | `|ψ⟩【态矢量 / ket：表示量子态的狄拉克记号】` |
+| $$O(N^2)$$ | 总会——但只注释一次 | `O(N²)【复杂度记号：计算时间随 N 平方增长】` |
+| $$H = \\dots$$ | 如果是论文核心哈密顿量 | `H【哈密顿量：描述系统总能量的算符，这里特指 XXX 模型】` |
+| 上下标 | 如果含义不显然 | `σᵢᶻ【泡利 Z 算符作用在第 i 个自旋上】` |
+
+### 去重与归一化
+
+- `quantum error correction` = `QEC` = `quantum error-correcting code` = `error-corrected` → 同一术语家族，共享注释
+- 首次用**全称**注释，后续用**简注**
+
+---
+
+## 3. 术语判定（决策器 v2）
+
+### 第一步：类别匹配（满足任一 → 候选注释）
+
+| # | 类别 | 触发条件 | 示例 |
+|:--|:--|:--|:--|
+| 1 | 领域缩写 | 3+ 大写字母，非全大写单词 | NISQ, QEC, FTQC, HHL, QAOA |
+| 2 | 技术术语 | 该领域特有概念 | stabilizer code, surface code, stoquastic |
+| 3 | 人名指代 | 姓氏 + 概念/算法/定理 | Shor's algorithm, Feynman's proposal |
+| 4 | 假熟悉词 | 日常英语但在量子语境下不同义 | gate, channel, code, state, measurement |
+| 5 | 历史/文化引用 | 领域外的学术/文化指代 | Solvay Conference, Laughlin and Pines |
+| 6 | 数学符号 | Bra-ket、复杂度记号、核心算符 | $$|\\Psi\\rangle$$, $$O(N^2)$$, $$\\mathcal{H}$$ |
+| 7 | 关键概念 | 对理解本文 thesis 必不可少 | 需先读摘要+引言提取论文核心论点后判定 |
+
+### 第二步：读者水平过滤
+
+标记为候选后，按用户水平二次过滤：
+
+| 术语 | basic | intermediate | advanced |
+|:--|:--|:--|:--|
+| qubit, superposition, entanglement | ✅ 注释 | ❌ 跳过 | ❌ 跳过 |
+| NISQ, QEC, FTQC | ✅ | ✅ | ❌ 如果已出现 |
+| stabilizer code, surface code | ✅ | ✅ | ✅ |
+| stoquastic, Gottesman-Knill | ✅ | ✅ | ✅ |
+
+### 第三步：去重过滤
+
+- 术语在该节（或前后 3000 字范围内）首次出现 → ✅
+- 术语已在前文注释过 → `【⤴简短翻译】`
+- 作者在自己句子里已给出全称解释 → ❌ 跳过
+- 括号里已有全称 → ❌ 如 `Noisy Intermediate-Scale Quantum (NISQ)`
+- 论文标题中的术语 → ❌ 不注释
+
+### 第四步：密度控制
+
+- 每句 ≤ 3 个注释。超过时保留最重要的（按类别优先级 1 > 2 > 6 > 7 > 4 > 5 > 3）
+- 每段 ≥ 50% 原文不被打断
+- 摘要和引言可以放宽到每句 ≤ 5 个注释（这些段落术语密度天然高）
+- 技术核心段（算法描述、数学推导）优先保证**原文完整**，注释后置或集中说明
+
+---
+
+## 4. 知识检索
+
+### 4.1 术语在知识库中
+
+直接用知识库的翻译 + 语境化解释（结合当前论文的用法微调）。
+
+### 4.2 术语不在知识库中
+
+按以下降级策略：
+
+| 优先级 | 策略 | 置信度标注 |
+|:--|:--|:--|
+| 1 | 从该论文上下文中推断含义 | ✅ 确认（从上下文推断） |
+| 2 | 从 LLM 训练数据中提取解释 | ⚠️ 推断（来自预训练知识，无法验证） |
+| 3 | 如果完全不确定 | 🔍 建议用户查阅原文参考文献 |
+
+标注方式：
+```
+stoquastic【⚠️推断：随机量子——哈密顿量非对角元均为非正数的系统，经典计算机可模拟】
+```
+
+### 4.3 解释深度标准
+
+所有注释应包含两部分：**翻译（叫什么）+ 解释（为什么重要/在本文中起什么作用）**。
+
+统一标准：
+- 翻译：简洁，控制在 10 个字以内
+- 解释：一句话，15-30 字，说明概念是什么、为什么在这里出现
+
+反例（太简略）：`gate【门】`——没有说明是量子门还是经典逻辑门
+正例：`gate【量子门：作用于量子比特的基本操作，如 Hadamard、CNOT，是量子电路的基本构造单元】`
+
+---
+
+## 5. 注释注入规则
 
 ### 基本格式
 
@@ -67,164 +216,246 @@ metadata:
 原文术语【中文翻译：一句话解释】
 ```
 
-### 缩写类
+### 变体
 
-```
-NISQ【含噪中等规模量子：50~几百个量子比特、门有噪声、不做纠错的量子计算机】
-```
+| 场景 | 格式 | 示例 |
+|:--|:--|:--|
+| 首次出现 | `术语【翻译：解释】` | `decoherence【退相干：量子系统与环境相互作用导致量子信息丢失的过程】` |
+| 再现（简注） | `术语【⤴翻译】` | `decoherence【⤴退相干】` |
+| 知识库外推断 | `术语【⚠️推断：翻译 — 解释】` | `stoquastic【⚠️推断：随机量子 — 哈密顿量非对角元非正，经典可模拟】` |
+| 数学符号 | `符号【名称：含义】` | `|ψ⟩【态矢量/ket：狄拉克记号，表示一个量子纯态】` |
+| 人名指代 | `人名 + 名词【翻译：解释】` | `Shor's algorithm【Shor算法：多项式时间质因数分解的量子算法，是量子计算的核心突破之一】` |
 
-### 概念类
+### 插入位置
 
-```
-quantum error correction【量子纠错：用多个物理量子比特保护一个逻辑量子比特，利用冗余检测和修正错误】
-```
-
-### 人名指代类
-
-```
-Shor's algorithm【Shor算法：在多项式时间内分解大整数的量子算法，破解RSA加密的基础】
-```
-
-### 简注（已出现过时）
-
-```
-QEC【⤴量子纠错】
-FTQC【⤴容错量子计算】
-```
-
-### 插入位置规则
-
-1. 注释紧跟在术语**之后**，在标点符号之前
-2. 如果术语后面已有括号说明，注释放在括号之后
-3. 不要在一个句子中插入超过 3 个注释——超过时选择最重要的
-4. 每段话保持至少 50% 的原文不被注释打断
+1. 注释紧跟在术语**之后**，在标点符号（逗号、句号、分号）之前
+2. 括号后：`Noisy Intermediate-Scale Quantum (NISQ)【含噪中等规模量子：...】` — 注释在括号外侧
+3. 引号内术语：不注释引号内的内容，在引号结束后补充
+4. 方程中的符号：不打断方程。在方程后面的句子里注释，或用 "其中 `H` 是【哈密顿量：...】" 的格式
+5. 脚注：不注释脚注
 
 ---
 
-## 输出格式
+## 6. 输出格式
 
-对用户要通读的论文，按以下方式输出：
+### 格式选择
 
-### 格式 A：全文带注释
+| 条件 | 格式 | 说明 |
+|:--|:--|:--|
+| 术语 ≤ 20 个、论文 ≤ 15 页 | **格式 A**：行间注释 | 直接内嵌注释输出 |
+| 术语 > 20 个或论文 > 15 页 | **格式 B**：术语表 + 简注正文 | 先输出术语表，再输出带简注的正文 |
+| 用户要求分节 | **格式 C**：逐节输出 | 每节独立输出，术语表跨节累积 |
+
+### 格式 A：行间注释
 
 ```
-> 原文段落内容【术语：解释】继续原文内容...
+> 原文段落内容【术语：解释】继续原文...
 
 > 下一段原文...
-
 ```
 
-### 格式 B：先术语表后正文
+末尾附加：
 
-如果术语量很大（>30个），先输出完整术语表，再输出带简注的正文。
+```
+---
+📊 本文统计：共注释 47 个术语（12 个首次出现，35 个⤴简注）
+🔍 其中 3 个为知识库外推断（已标注⚠️）
+```
 
-### 术语表格式
+### 格式 B：术语表 + 简注正文
+
+先输出：
+
+```
+## 术语速查表
 
 | 原文 | 翻译 | 语境解释 |
 |:--|:--|:--|
-| NISQ | 含噪中等规模量子 | 50~几百 qubit，有噪声，不做纠错 |
-| ... | ... | ... |
+| NISQ | 含噪中等规模量子 | 50~几百 qubit，门有噪声，不做纠错 |
+...（全部术语）
+```
+
+再输出带简注的正文：
+
+```
+> NISQ【⤴含噪中等规模量子】technology will be available in the near future...
+```
+
+### 格式 C：逐节输出
+
+```
+## §1 Introduction（已注释）
+
+> 正文...
+
+术语累积：[NISQ, qubit, quantum supremacy] ← 跨节传递
+
+---
+（等用户说"继续"）
+```
 
 ---
 
-## 处理流程
+## 7. 质量保障
 
-1. **获取全文** - 用 WebFetch 获取 arXiv 或期刊页面的完整论文文本
-2. **初次扫描** - 快速浏览全文，列出候选术语清单
-3. **应用决策器** - 对每个候选用决策器判断
-4. **生成输出** - 按选定的格式（A 或 B）输出带注释的正文
-5. **末尾附术语表** - 在所有带注释的正文字段末尾，附完整术语速查表
+### 7.1 事实性校验
+
+**在输出每个带注释的段落后，自检：**
+
+1. 知识库中的术语：翻译是否与知识库一致？
+2. 知识库外的术语：是否标注了 `⚠️推断`？
+3. 假熟悉词：在量子语境下的解释是否正确？（gate = 量子门，不是大门）
+4. 人名指代：人名和算法的对应关系是否正确？（Shor = 因式分解，不是搜索）
+
+### 7.2 一致性校验
+
+**在输出全文之前，检查：**
+
+1. 同一术语在不同位置是否总用相同的简注形式？
+2. 缩写和全称是否建立了关联？（QEC → `【⤴量子纠错】` 应该始终一致）
+3. 术语表与正文注释是否一一对应？
+
+### 7.3 用户反馈闭环
+
+如果用户在后续消息中指出某个注释错误或不准确：
+1. 感谢用户并修正
+2. 在后续所有注释中使用修正后的版本
+3. 将修正记录追加到当前会话的术语表中
+
+---
+
+## 8. 处理流程（总览）
+
+```
+用户请求
+  ↓
+【阶段 0】交互摸底 → 确认水平（basic/intermediate/advanced）+ 确认范围
+  ↓
+【阶段 1】输入获取 → arxiv-vanity → ar5iv → arXiv HTML → 抽象页 → pdfplumber
+  ↓
+【阶段 2】术语发现 → 知识库匹配 + 模式匹配 + 假熟悉词扫描
+  ↓
+【阶段 3】术语判定 → 类别匹配 → 水平过滤 → 去重 → 密度控制
+  ↓
+【阶段 4】知识检索 → 知识库内 → 直接引用
+                    → 知识库外 → 上下文推断 → LLM推断 → 标记⚠️
+  ↓
+【阶段 5】注释注入 → 按位置规则插入
+  ↓
+【阶段 6】输出呈现 → 选择格式 A/B/C → 输出正文 + 术语表 + 统计
+  ↓
+【阶段 7】质量校验 → 事实性 + 一致性 + 置信度标注
+  ↓
+输出 + 等待用户反馈
+```
 
 ---
 
 ## 示例
 
-### 原文（无注释）
+### 原文
 
-> Noisy Intermediate-Scale Quantum (NISQ) technology will be available in the near future. Quantum computers with 50-100 qubits may be able to perform tasks which surpass the capabilities of today's classical digital computers, but noise in quantum gates will limit the size of quantum circuits that can be executed reliably. NISQ devices will be useful tools for exploring many-body quantum physics, and may have other useful applications, but the 100-qubit quantum computer will not change the world right away.
+> Noisy Intermediate-Scale Quantum (NISQ) technology will be available in the near future. Quantum computers with many qubits may surpass classical computers for certain tasks. However, noise in quantum gates will limit the size of circuits that can be run reliably, unless quantum error correction is used.
 
-### 带注释输出
+### 带注释输出（intermediate 水平）
 
-> Noisy Intermediate-Scale Quantum (NISQ) technology will be available in the near future【近期即将到来，Preskill写于2018年，2019年Google Sycamore兑现了】. Quantum computers with 50-100 qubits【量子比特：量子计算机的基本信息单元，可同时处于0和1的叠加态】 may be able to perform tasks which surpass the capabilities of today's classical digital computers, but noise in quantum gates【量子门噪声：门操作的误差导致量子信息退化，是NISQ时代最大的限制因素】 will limit the size of quantum circuits【量子电路：类比经典逻辑电路，由量子门序列组成】 that can be executed reliably. NISQ devices will be useful tools for exploring many-body quantum physics【多体量子物理：研究大量粒子相互作用的量子系统，经典计算机难以模拟】, and may have other useful applications, but the 100-qubit quantum computer will not change the world right away.
+> Noisy Intermediate-Scale Quantum (NISQ) technology will be available in the near future. Quantum computers with many qubits may surpass classical computers for certain tasks. However, noise in quantum gates【量子门噪声：操作误差导致量子信息退化，使电路结果不可靠】 will limit the size of circuits【量子电路：量子门操作构成的有向无环图，深度受噪声限制】 that can be run reliably, unless quantum error correction【量子纠错：用多个物理qubit编码一个逻辑qubit，以冗余换取容错——但计算开销巨大】 is used.
+
+```
+---
+📊 本节统计：共注释 3 个术语（3 个首次出现，已在知识库内）
+```
 
 ---
 
 ## 领域术语知识库
 
-以下是在量子计算论文中经常需要注释的术语分类参考。遇到与此知识库中的术语相似的概念时，同样需要注释。
+以下是在量子计算论文中经常需要注释的术语。**知识库作为起点，不是终点——遇到不在表中的术语，用轨道 B 的模式匹配主动发现。**
 
 ### 量子计算核心概念
-- qubit / quantum bit → 量子比特
-- superposition → 叠加态
-- entanglement → 量子纠缠
-- decoherence → 退相干
-- quantum gate → 量子门
-- quantum circuit → 量子电路
-- circuit depth → 电路深度
-- gate fidelity → 门保真度
+- qubit / quantum bit → 量子比特（可同时处于 0 和 1 叠加态的量子信息基本单元）
+- superposition → 叠加态（量子系统可处在多个经典状态的线性组合中）
+- entanglement → 量子纠缠（多个粒子间的非经典关联——测量一个瞬间确定另一个）
+- decoherence → 退相干（量子系统与环境作用导致量子性丧失——噪声的根本来源）
+- quantum gate → 量子门（作用于量子比特的基本酉操作，构成量子电路的基本单元）
+- quantum circuit → 量子电路（量子门序列构成的计算模型，类比经典逻辑电路）
+- circuit depth → 电路深度（量子电路从输入到输出经过的门层数——决定噪声积累）
+- gate fidelity → 门保真度（量子门操作的准确度——1 减去错误率，NISQ 时代约 99.9%）
+- Bloch sphere → 布洛赫球（单个量子比特所有可能纯态的三维可视化表示）
 
 ### 量子纠错
-- quantum error correction (QEC) → 量子纠错
-- fault-tolerant quantum computing (FTQC) → 容错量子计算
-- surface code → 表面码
-- stabilizer code → 稳定子码
-- threshold theorem → 阈值定理
-- logical qubit → 逻辑量子比特
-- physical qubit → 物理量子比特
-- overhead cost → 开销成本
+- quantum error correction (QEC) → 量子纠错（用多个物理qubit保护1个逻辑qubit，利用纠缠检测/修正错误）
+- fault-tolerant quantum computing (FTQC) → 容错量子计算（即使底层物理qubit有错，上层逻辑qubit也能可靠计算）
+- surface code → 表面码（最受关注的一类拓扑QEC码，仅需近邻连接，对物理错误率要求约1%）
+- stabilizer code → 稳定子码（用量子群论统一描述QEC码的数学框架——Gottesman 的博士论文奠定）
+- threshold theorem → 阈值定理（只要物理门错误率低于阈值约10⁻⁴~10⁻³，QEC可指数压制逻辑错误）
+- logical qubit → 逻辑量子比特（被QEC保护出来的无错qubit——并行计算的对象）
+- physical qubit → 物理量子比特（实际硬件上的量子比特——有噪声，被QEC编码后形成逻辑qubit）
+- overhead cost → 开销成本（QEC的代价——需要~1000个物理qubit保护1个逻辑qubit）
 
 ### 量子算法
-- Shor's algorithm → Shor算法（质因数分解）
-- Grover's algorithm → Grover算法（无序搜索）
-- QAOA → 量子近似优化算法
-- VQE → 变分量子本征求解器
-- HHL algorithm → HHL算法（量子矩阵求逆）
-- quantum Fourier transform → 量子傅里叶变换
-- quantum phase estimation → 量子相位估计
+- Shor's algorithm → Shor算法（多项式时间质因数分解的量子算法——量子计算的原爆点，破解RSA）
+- Grover's algorithm → Grover算法（无序搜索的O(√N)量子加速——二次提速，不是指数提速）
+- QAOA → 量子近似优化算法（NISQ时代求解组合优化的混合经典-量子算法，Farhi等人2014年提出）
+- VQE → 变分量子本征求解器（NISQ时代用变分原理找分子基态能量的算法——量子化学主要应用）
+- HHL algorithm → HHL算法（量子矩阵求逆算法，指数加速解线性方程组——但I/O瓶颈限制了实用性）
+- quantum Fourier transform → 量子傅里叶变换（量子版的FFT，Shor算法的核心子程序）
+- quantum phase estimation → 量子相位估计（提取量子态相位的算法——许多量子算法的核心子程序）
+- Deutsch-Jozsa algorithm → Deutsch-Jozsa算法（第一个证明量子超越经典的算法问题——虽然问题本身无应用价值）
+- Simon's algorithm → Simon算法（证明量子指数加速的第一个算法——直接启发了Shor）
+- Bernstein-Vazirani algorithm → Bernstein-Vazirani算法（用一个查询确定隐藏比特串的量子算法）
+- boson sampling → 玻色子采样（用线性光学证明量子优势的中间实验——经典模拟极难，但物理上也未被完全验证）
 
-### 量子复杂度
-- BQP → 有界误差量子多项式时间
-- NP-hard → NP困难
-- quantum supremacy → 量子优越性/量子霸权
-- quantum advantage → 量子优势/量子加速
+### 量子复杂度理论
+- BQP → 有界误差量子多项式时间（量子计算机可在多项式时间内求解的问题类——量子的P）
+- NP-hard → NP困难（至少和最难NP问题一样难——量子不太可能高效解决NP-hard，最多二次加速）
+- quantum supremacy → 量子优越性/量子霸权（量子计算机完成一个经典超算不可能完成的任务，不管任务有没有用）
+- quantum advantage → 量子优势（量子计算机在一个**有用的**问题上比经典快——比supremacy更商业化）
+- QMA → 量子Merlin-Arthur（NP的量子类比——量子验证+量子证明的问题类）
+- postBQP → 后选择BQP（允许后选择操作的BQP——等于经典复杂度类PP，说明后选择让量子变得极强）
 
 ### 硬件平台
-- superconducting qubit / transmon → 超导量子比特
-- trapped ion → 离子阱
-- topological qubit → 拓扑量子比特
-- Majorana zero mode → 马约拉纳零模
-- dilution refrigerator → 稀释制冷机
-- quantum annealer → 量子退火器
-- adiabatic quantum computing → 绝热量子计算
+- superconducting qubit / transmon → 超导量子比特（Google/IBM路线——极低温超导电路，门快但保真度中等）
+- trapped ion → 离子阱量子比特（Quantinuum路线——电磁场囚禁离子，保真度最高但门慢）
+- topological qubit → 拓扑量子比特（Microsoft路线——用马约拉纳零模编码，抗噪最强但制造极难）
+- Majorana zero mode → 马约拉纳零模（一种非阿贝尔任意子的候选准粒子——拓扑量子计算的物理实现基础）
+- dilution refrigerator → 稀释制冷机（超导量子比特必须在~15mK运行——比外太空还冷几百倍）
+- quantum annealer → 量子退火器（D-Wave设备——用绝热演化求解优化问题，非通用量子计算机）
+- adiabatic quantum computing → 绝热量子计算（量子退火的无噪声理想版本——与门模型理论上等价）
+- photonic quantum computing → 光子量子计算（用光子做qubit——室温运行，无退相干问题，但2-qubit门难实现）
+- neutral atom → 中性原子量子计算（用光镊阵列囚禁中性原子——近年快速崛起的平台，可扩展性好）
+- quantum dot → 量子点量子比特（半导体自旋qubit——Intel的技术路线，与经典半导体工艺兼容）
 
 ### 数学工具
-- Hamiltonian → 哈密顿量
-- Hermitian matrix → 厄米矩阵
-- tensor network → 张量网络
-- Gibbs state → 吉布斯态/热平衡态
-- semidefinite programming → 半正定规划
-- density matrix / density operator → 密度矩阵/密度算符
+- Hamiltonian → 哈密顿量（描述量子系统总能量的算符——量子力学最核心的数学对象）
+- Hermitian matrix → 厄米矩阵（等于自身共轭转置的矩阵，特征值全为实数，量子力学中可观测量必须是厄米的）
+- tensor network → 张量网络（用多维数组缩并表示和近似多体量子态的数学工具——MPS、PEPS、MERA等）
+- Gibbs state / thermal state → 吉布斯态/热平衡态（系统在温度T下的热平衡态，密度矩阵 ∝ exp(-H/kT)）
+- semidefinite programming (SDP) → 半正定规划（在线性矩阵不等式约束下优化线性函数——量子SDP有指数加速潜力）
+- density matrix / operator → 密度矩阵/算符（描述混合态的通用工具，比纯态矢量|ψ⟩更一般）
+- unitary operator / matrix → 酉算符/酉矩阵（保持内积不变的线性变换——量子门必须是酉操作）
+- Pauli matrices → 泡利矩阵（σₓ, σᵧ, σ₂——最基本的量子门和纠错码构建块）
+- trace distance → 迹距离（衡量两个量子态之间差异的度量——量子信息理论的核心距离量度）
+- fidelity (quantum) → 量子保真度（两个量子态之间的"重叠度"——衡量量子操作准确性的标准量度）
 
----
-
-## 质量检查清单
-
-在交付带注释的文本前：
-
-- [ ] 每个注释是否准确（翻译和解释都正确）？
-- [ ] 是否只注释了首次出现的术语？
-- [ ] 是否有句子被注释过度打断（>3个注释/句）？
-- [ ] 术语表是否完整（与正文中的注释一一对应）？
-- [ ] 是否跳过了本领域读者应知应会的概念？
-- [ ] 是否跳过了作者已清晰解释的术语？
-- [ ] 格式是否一致（`【翻译：解释】`）？
+### 量子信息与密码
+- QKD (Quantum Key Distribution) → 量子密钥分发（利用量子不可克隆定理分发对称密钥——窃听必然留下痕迹）
+- PQC (Post-Quantum Cryptography) → 后量子密码学（不依赖算力量的密码算法——量子计算机出来后替代RSA/ECC的方案）
+- QRAM (Quantum Random Access Memory) → 量子随机存取存储器（量子版本的RAM——很多量子ML算法的I/O瓶颈）
+- no-cloning theorem → 不可克隆定理（量子力学证明任意未知量子态无法被完美复制——QKD的安全基础）
+- quantum teleportation → 量子隐形传态（用经典通信+量子纠缠传递未知量子态——不要被名字误导，不传递物质）
+- superdense coding → 超密编码（用1个qubit + 1个纠缠对传输2个经典比特——量子通信的经典结果）
+- Bell inequality → 贝尔不等式（区分量子关联和经典关联的实验判据——违反贝尔不等式证明量子纠缠是真实的）
+- EPR paradox → EPR悖论（Einstein-Podolsky-Rosen在1935年提出的思想实验——质疑量子力学的完备性）
 
 ---
 
 ## 参考
 
-本技能基于量子计算论文阅读的实际需求设计。术语知识库来源于：
+本技能术语知识库来源于：
 - Nielsen & Chuang, *Quantum Computation and Quantum Information*
 - Preskill, *Quantum Computing in the NISQ era and beyond* (2018)
 - Scott Aaronson, *Quantum Computing Since Democritus* lecture notes
 - arXiv quant-ph 领域的高频术语统计
+- Qiskit Textbook, IBM Quantum Learning
+- Gottesman, *Stabilizer Codes and Quantum Error Correction* (1997)
