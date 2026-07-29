@@ -1,6 +1,6 @@
 # Architecture
 
-Interlinear separates the agent's always-loaded decision process from domain material that is needed only for some papers.
+Interlinear separates the agent's always-loaded decision process from domain material that is needed only for some papers and from the optional local application.
 
 ## Design goals
 
@@ -9,6 +9,7 @@ Interlinear separates the agent's always-loaded decision process from domain mat
 3. Make uncertainty visible.
 4. Keep explanation density controllable.
 5. Remain portable across agent runtimes.
+6. Keep private papers and page renders on the reader's machine.
 
 ## Progressive loading
 
@@ -52,6 +53,30 @@ Confidence is attached to the annotation, not hidden in internal reasoning.
 ## Compatibility
 
 The installable skill is the [`interlinear/`](../interlinear/) directory. It uses only the shared `name` and `description` frontmatter fields. Runtime-specific UI metadata lives in `interlinear/agents/openai.yaml` and does not alter the portable skill contract.
+
+## Application layer
+
+The optional [`interlinear_web/`](../interlinear_web/) package is deliberately
+outside the installable Skill:
+
+```mermaid
+flowchart LR
+    U[Local browser] -->|127.0.0.1| API[FastAPI]
+    API --> S[Private content-addressed library]
+    S --> P[PyMuPDF extraction]
+    P --> R[PNG page cache]
+    C[Optional CAJ converter] -->|normalized PDF| S
+```
+
+The browser never receives a remote asset dependency. FastAPI serves the UI,
+document metadata, page text, search results, and page images from the same
+local origin. PyMuPDF opens a fresh document handle per operation so requests
+do not share mutable PDF state.
+
+CAJ conversion is an explicit adapter boundary because CAJ is proprietary and
+has incompatible internal variants. A configured command is tokenized and
+executed without a shell. Its output must exist and begin with a PDF signature
+before it enters the normal PDF pipeline.
 
 ## Repository boundary
 

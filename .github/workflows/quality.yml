@@ -22,12 +22,14 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements-dev.txt
+          cache-dependency-path: |
+            requirements-dev.txt
+            requirements-web.txt
       - name: Install validator dependencies
-        run: python -m pip install -r requirements-dev.txt
+        run: python -m pip install -r requirements-web.txt -r requirements-dev.txt
       - name: Validate structure, references, claims, and privacy
         run: python scripts/validate_skill.py
-      - name: Run annotation regression suite
+      - name: Run regression suite
         run: python -m unittest discover -s tests -v
 
   markdownlint:

@@ -20,8 +20,9 @@ Interlinear improves when a correction is concrete, sourced, and reproducible.
 5. Run:
 
    ```bash
-   python -m pip install -r requirements-dev.txt
+   python -m pip install -r requirements-web.txt -r requirements-dev.txt
    python scripts/validate_skill.py
+   python -m unittest discover -s tests -v
    ```
 
 6. If Node.js is available, verify discovery:
@@ -40,6 +41,7 @@ Interlinear improves when a correction is concrete, sourced, and reproducible.
 | Visual explanation rules | `interlinear/references/geometric-intuition.md` |
 | Quantum terminology | `interlinear/references/quantum-terminology.md` |
 | New recurring domain | New file under `interlinear/references/` plus one routing line in `SKILL.md` |
+| Local web reader or API | `interlinear_web/` |
 
 Keep `SKILL.md` under 500 lines. Prefer one-hop references over adding every detail to the always-loaded core.
 

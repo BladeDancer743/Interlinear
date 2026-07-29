@@ -1,6 +1,29 @@
 # Changelog
 
-All notable changes to the Interlinear skill will be documented in this file.
+All notable changes to the Interlinear project will be documented in this file.
+
+## [4.2.0] — 2026-07-29
+
+### Added
+
+- Local-first three-panel paper workbench for PDF and CAJ imports
+- 72–300 DPI page rendering that preserves equations, vector figures, images,
+  and original layout
+- Page thumbnails, keyboard navigation, zoom, searchable text, PDF outline,
+  document metadata, and embedded raster inspection
+- Private content-addressed document library and immutable page cache under
+  `.interlinear-web/`
+- Optional shell-free CAJ converter adapter with capability reporting and
+  explicit fallback guidance for unsupported CAJ variants
+- API and storage regression suites using generated, redistribution-safe PDFs
+
+### Changed
+
+- CI now installs and tests the optional web application dependencies
+- Repository validation skips ignored runtime, virtual-environment, and local
+  paper-library directories
+- README and architecture now document the application layer independently
+  from the portable Skill
 
 ## [4.1.0] — 2026-07-29
 

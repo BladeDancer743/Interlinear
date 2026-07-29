@@ -9,6 +9,7 @@ Interlinear releases the repository and the installable `interlinear/` skill tog
 3. Run:
 
    ```bash
+   python -m pip install -r requirements-web.txt -r requirements-dev.txt
    python scripts/validate_skill.py
    python -m unittest discover -s tests -v
    ```

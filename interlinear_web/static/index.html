@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta
+      name="description"
+      content="Interlinear 本地论文工作台：完整查看 PDF 与 CAJ 文档页面、文本和图像信息。"
+    >
+    <title>Interlinear · Paper Workbench</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/app.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Interlinear 首页">
+          <span class="brand-mark" aria-hidden="true">
+            <i></i><i></i><i></i>
+          </span>
+          <span>
+            <strong>Interlinear</strong>
+            <small>Paper Workbench</small>
+          </span>
+        </a>
+
+        <form class="search" id="search-form" role="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="6"></circle>
+            <path d="m16 16 4 4"></path>
+          </svg>
+          <input
+            id="search-input"
+            type="search"
+            placeholder="检索当前文档 / Enter"
+            autocomplete="off"
+            disabled
+          >
+          <kbd>⌘ K</kbd>
+        </form>
+
+        <div class="topbar-status">
+          <span class="privacy-dot"></span>
+          <span>仅在本机处理</span>
+          <button class="icon-button mobile-library" id="mobile-library" title="文档库">
+            <svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"></path></svg>
+          </button>
+        </div>
+      </header>
+
+      <aside class="library-panel" id="library-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">LOCAL LIBRARY</span>
+            <h1>文档库</h1>
+          </div>
+          <span class="count-pill" id="document-count">0</span>
+        </div>
+
+        <label class="dropzone" id="dropzone" for="file-input">
+          <input id="file-input" type="file" accept=".pdf,.caj" hidden>
+          <span class="drop-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"></path>
+              <path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"></path>
+            </svg>
+          </span>
+          <strong>导入论文或技术文档</strong>
+          <small>拖入 PDF / CAJ，文件不会离开本机</small>
+          <span class="import-cta">选择文件</span>
+        </label>
+
+        <div class="capabilities">
+          <span class="capability is-ready" id="pdf-capability">
+            <i></i> PDF 就绪
+          </span>
+          <button class="capability" id="caj-capability" type="button">
+            <i></i> CAJ 检测中
+          </button>
+        </div>
+
+        <div class="document-list" id="document-list">
+          <div class="library-empty">
+            <span>01</span>
+            <p>导入第一篇文档，开始逐页检查。</p>
+          </div>
+        </div>
+
+        <footer class="library-footer">
+          <span id="library-path">正在读取本地库…</span>
+        </footer>
+      </aside>
+
+      <main class="reader" id="reader">
+        <div class="reader-toolbar" id="reader-toolbar">
+          <div class="page-controls">
+            <button class="icon-button" id="previous-page" title="上一页" disabled>
+              <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg>
+            </button>
+            <label class="page-input">
+              <input id="page-number" type="number" min="1" value="1" disabled>
+              <span>/ <b id="page-total">—</b></span>
+            </label>
+            <button class="icon-button" id="next-page" title="下一页" disabled>
+              <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></svg>
+            </button>
+          </div>
+
+          <div class="document-title" id="toolbar-title">
+            <span>等待导入文档</span>
+          </div>
+
+          <div class="zoom-controls">
+            <button class="icon-button" id="zoom-out" title="缩小" disabled>−</button>
+            <button class="zoom-value" id="zoom-reset" disabled>100%</button>
+            <button class="icon-button" id="zoom-in" title="放大" disabled>＋</button>
+            <a class="icon-button" id="open-pdf" href="#" target="_blank" title="在新窗口打开 PDF">
+              <svg viewBox="0 0 24 24">
+                <path d="M14 4h6v6M20 4l-9 9"></path>
+                <path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"></path>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <div class="reader-body">
+          <nav class="thumbnail-rail" id="thumbnail-rail" aria-label="页面缩略图"></nav>
+          <section class="page-viewport" id="page-viewport">
+            <div class="welcome" id="welcome">
+              <div class="welcome-graphic" aria-hidden="true">
+                <div class="paper paper-back"></div>
+                <div class="paper paper-front">
+                  <span></span><span></span><span></span>
+                  <b></b>
+                  <i></i><i></i>
+                </div>
+                <div class="scan-line"></div>
+              </div>
+              <span class="eyebrow">READ · INSPECT · UNDERSTAND</span>
+              <h2>把论文完整地摊开来看</h2>
+              <p>
+                版式、公式、插图保留在高清原页；文本、目录与图像信息在右侧同步展开。
+              </p>
+              <button class="primary-button" id="welcome-import">导入第一篇文档</button>
+              <div class="feature-strip">
+                <span><b>300</b> DPI 高清页</span>
+                <span><b>100%</b> 本地处理</span>
+                <span><b>PDF</b> + CAJ</span>
+              </div>
+            </div>
+
+            <div class="page-loader" id="page-loader" hidden>
+              <span></span><span></span><span></span>
+            </div>
+            <div class="page-canvas" id="page-canvas" hidden>
+              <img id="page-image" alt="论文页面">
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <aside class="inspector" id="inspector">
+        <div class="inspector-tabs" role="tablist">
+          <button class="tab is-active" data-tab="text" role="tab">正文</button>
+          <button class="tab" data-tab="figures" role="tab">视觉</button>
+          <button class="tab" data-tab="outline" role="tab">目录</button>
+          <button class="tab" data-tab="info" role="tab">信息</button>
+        </div>
+
+        <div class="inspector-content">
+          <section class="tab-panel is-active" id="panel-text">
+            <div class="section-label">
+              <span id="text-heading">PAGE TEXT</span>
+              <button class="text-button" id="copy-text" disabled>复制</button>
+            </div>
+            <div class="empty-state" id="text-empty">
+              <span>Aa</span>
+              <p>选择文档后，这里显示当前页可检索的正文。</p>
+            </div>
+            <pre class="page-text" id="page-text" hidden></pre>
+            <div class="search-results" id="search-results" hidden></div>
+          </section>
+
+          <section class="tab-panel" id="panel-figures">
+            <div class="section-label"><span>PAGE VISUALS</span></div>
+            <div class="empty-state" id="figures-empty">
+              <span>◫</span>
+              <p>当前页未检测到独立的位图或矢量绘制组。</p>
+            </div>
+            <div class="figure-list" id="figure-list"></div>
+            <p class="panel-note">
+              矢量图、公式和复杂排版会完整保留在中央高清原页中。
+            </p>
+          </section>
+
+          <section class="tab-panel" id="panel-outline">
+            <div class="section-label"><span>DOCUMENT OUTLINE</span></div>
+            <div class="empty-state" id="outline-empty">
+              <span>§</span>
+              <p>文档没有内嵌目录，仍可按页浏览与全文检索。</p>
+            </div>
+            <div class="outline-list" id="outline-list"></div>
+          </section>
+
+          <section class="tab-panel" id="panel-info">
+            <div class="section-label"><span>DOCUMENT DATA</span></div>
+            <dl class="metadata" id="metadata"></dl>
+          </section>
+        </div>
+
+        <footer class="inspector-footer">
+          <span id="page-size">—</span>
+          <span id="render-quality">160 DPI</span>
+        </footer>
+      </aside>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <dialog class="capability-dialog" id="caj-dialog">
+      <button class="dialog-close" id="dialog-close" aria-label="关闭">×</button>
+      <span class="eyebrow">CAJ COMPATIBILITY</span>
+      <h2>CAJ 本地兼容层</h2>
+      <p id="caj-detail"></p>
+      <div class="dialog-code">
+        <span>可选配置</span>
+        <code>INTERLINEAR_CAJ_COMMAND</code>
+      </div>
+      <p class="dialog-note">
+        CAJ 存在多种内部变体。转换失败时，可在 CAJViewer 中“打印为 PDF”后再导入。
+      </p>
+    </dialog>
+
+    <script src="/assets/app.js" defer></script>
+  </body>
+</html>

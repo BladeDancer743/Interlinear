@@ -2,7 +2,7 @@
   <img src="docs/assets/interlinear-hero.svg" alt="Interlinear — read technical papers without leaving the sentence" width="100%">
 </p>
 
-<p align="center"><a href="https://github.com/BladeDancer743/Interlinear/actions/workflows/quality.yml"><img alt="Quality" src="https://img.shields.io/github/actions/workflow/status/BladeDancer743/Interlinear/quality.yml?branch=main&style=flat-square&label=quality"></a> <a href="interlinear/SKILL.md"><img alt="Agent Skill" src="https://img.shields.io/badge/Agent%20Skill-valid-4de1c1?style=flat-square"></a> <a href="CHANGELOG.md"><img alt="Version 4.1.0" src="https://img.shields.io/badge/version-4.1.0-f1c27d?style=flat-square"></a> <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/BladeDancer743/Interlinear?style=flat-square"></a></p>
+<p align="center"><a href="https://github.com/BladeDancer743/Interlinear/actions/workflows/quality.yml"><img alt="Quality" src="https://img.shields.io/github/actions/workflow/status/BladeDancer743/Interlinear/quality.yml?branch=main&style=flat-square&label=quality"></a> <a href="interlinear/SKILL.md"><img alt="Agent Skill" src="https://img.shields.io/badge/Agent%20Skill-valid-4de1c1?style=flat-square"></a> <a href="CHANGELOG.md"><img alt="Version 4.2.0" src="https://img.shields.io/badge/version-4.2.0-f1c27d?style=flat-square"></a> <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/BladeDancer743/Interlinear?style=flat-square"></a></p>
 
 # Interlinear
 
@@ -11,6 +11,8 @@
 Interlinear 是一个跨 agent 的论文阅读 skill。它识别缩写、符号、命名定理和“看似熟悉但语义特殊”的词，在不改写作者论证的前提下插入简短中文解释。
 
 它首先服务量子计算论文，也能通过上下文发现机制处理物理、计算机科学和其他技术领域。
+
+从 `v4.2` 开始，仓库还提供一个完全本地的论文工作台：中央查看保留公式、版式和插图的高清原页，右侧同步查看正文、目录、位图信息和文档元数据。
 
 ## 30 秒看懂
 
@@ -106,6 +108,54 @@ https://arxiv.org/abs/1801.00862
 
 长论文默认先建立 thesis map，再逐节交付；不会为了“全文处理”把整个 PDF 粗暴塞进一次上下文。
 
+## 本地论文工作台
+
+Web 工作台属于仓库应用层，不会增加 agent 每次调用 Skill 时的上下文负担。它默认只监听 `127.0.0.1`，页面渲染、文本提取、全文搜索与文件缓存都在本机完成。
+
+<p align="center">
+  <img src="docs/assets/paper-workbench.png" alt="Interlinear 本地论文工作台：完整原页、缩略图与矢量信息面板" width="100%">
+</p>
+
+```text
+本地文档库 → 高清原页 + 页面缩略图
+          ├→ 可检索正文
+          ├→ PDF 目录与元数据
+          └→ 嵌入位图与矢量绘制信息
+```
+
+先克隆完整仓库，然后启动：
+
+```bash
+python -m venv .venv
+python -m pip install -r requirements-web.txt
+python -m interlinear_web --open
+```
+
+Windows PowerShell 也可以直接使用虚拟环境中的 Python：
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-web.txt
+.\.venv\Scripts\python.exe -m interlinear_web --open
+```
+
+浏览器会打开 `http://127.0.0.1:8765`。导入后的文件和渲染缓存保存在 Git 忽略的 `.interlinear-web/`，不会上传到任何远程服务。
+
+### PDF 与 CAJ 边界
+
+- **PDF**：内置支持。可按 72–300 DPI 查看完整原页，并提取正文、目录、链接数、嵌入位图和矢量绘制信息。
+- **CAJ**：界面可直接接收，但转换由本机可用的 `caj2pdf` 或用户指定转换器完成。
+- **CAJ 变体**：CAJ/HN 等内部格式兼容性并不统一；转换失败时，工作台会显示真实错误，不会假装已经解析。
+- **保底路径**：可在 CAJViewer 中使用“打印为 PDF”，再把 PDF 导入工作台。
+
+如果 `caj2pdf` 不在 `PATH`，可以用一个不经过 shell 执行的命令模板指定转换器：
+
+```powershell
+$env:INTERLINEAR_CAJ_COMMAND = 'caj2pdf convert {input} -o {output}'
+.\.venv\Scripts\python.exe -m interlinear_web --open
+```
+
+详细的接口、存储与安全说明见 [本地工作台文档](docs/web-workbench.md)。
+
 ### 校验导出的注释
 
 把精确原文保存为 `source.txt`，并按 Skill 约定在导出稿中加入不可见的
@@ -119,7 +169,7 @@ python interlinear/scripts/validate_annotation.py \
 校验器会在移除 `【…】` 后比对原文，同时检查括号、夹注格式、公式/代码保护、
 单句密度和节尾统计。它是零依赖脚本，随 Skill 一起安装。
 
-## v4.1 的结构
+## v4.2 的结构
 
 ```text
 Interlinear/
@@ -133,8 +183,13 @@ Interlinear/
 │       ├── geometric-intuition.md
 │       ├── paper-acquisition.md
 │       └── quantum-terminology.md
+├── interlinear_web/                # 本地 PDF / CAJ 论文工作台
+│   ├── app.py                      # 本地 API 与静态界面
+│   ├── store.py                    # 私有文档库、提取与渲染
+│   ├── caj.py                      # 可选 CAJ 转换器适配层
+│   └── static/                     # 离线前端
 ├── scripts/validate_skill.py       # 结构、链接、隐私与指标校验
-├── tests/                          # 注释校验器回归测试
+├── tests/                          # Skill、PDF、CAJ 与 API 回归测试
 ├── docs/                           # 设计、评测与扩展文档
 └── .github/                        # CI 与社区协作入口
 ```
@@ -162,10 +217,12 @@ Interlinear 不会：
 
 ## 项目状态
 
-`v4.1.0` 在跨 agent 的 v4 结构上加入了注释稿机器质量门禁；真实论文覆盖仍在持续扩大。
+`v4.2.0` 加入了本地 PDF / CAJ 论文工作台，同时保持 `interlinear/` Skill 的便携性和上下文效率。
 
 当前重点：
 
+- 增加可选 OCR，为纯扫描 PDF 提供正文识别；
+- 扩大不同 CAJ 内部变体的兼容性测试；
 - 增加可复现的论文片段评测集；
 - 扩充量子之外的领域 reference；
 - 对术语翻译和几何类比建立来源审查；
@@ -174,6 +231,7 @@ Interlinear 不会：
 ## 文档
 
 - [设计与架构](docs/architecture.md)
+- [本地论文工作台](docs/web-workbench.md)
 - [评测方法](docs/evaluation.md)
 - [扩展新领域](docs/extending-domains.md)
 - [发布流程](docs/releasing.md)

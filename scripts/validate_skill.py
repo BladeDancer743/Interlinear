@@ -18,6 +18,18 @@ TERM_REFERENCE = SKILL_DIR / "references" / "quantum-terminology.md"
 OPENAI_YAML = SKILL_DIR / "agents" / "openai.yaml"
 ANNOTATION_VALIDATOR = SKILL_DIR / "scripts" / "validate_annotation.py"
 ANNOTATION_TESTS = ROOT / "tests" / "test_validate_annotation.py"
+IGNORED_PARTS = {
+    ".git",
+    ".interlinear-web",
+    ".venv",
+    "node_modules",
+    "papers",
+    "venv",
+}
+
+
+def is_runtime_path(path: Path) -> bool:
+    return any(part in IGNORED_PARTS for part in path.relative_to(ROOT).parts)
 
 
 class Validation:
@@ -127,7 +139,7 @@ def validate_skill(validation: Validation) -> None:
 def validate_links(validation: Validation) -> None:
     link_pattern = re.compile(r"!?\[[^\]]*]\(([^)]+)\)")
     for markdown in sorted(ROOT.rglob("*.md")):
-        if ".git" in markdown.parts:
+        if is_runtime_path(markdown):
             continue
         text = markdown.read_text(encoding="utf-8")
         for raw_target in link_pattern.findall(text):
@@ -174,7 +186,7 @@ def validate_claims_and_privacy(validation: Validation) -> None:
         re.compile("/" + r"home/[^/\s]+"),
     )
     for path in sorted(ROOT.rglob("*")):
-        if not path.is_file() or ".git" in path.parts:
+        if not path.is_file() or is_runtime_path(path):
             continue
         if path.suffix.lower() not in {".md", ".py", ".yml", ".yaml", ".svg"}:
             continue
@@ -187,6 +199,8 @@ def validate_claims_and_privacy(validation: Validation) -> None:
 
     active_svg = re.compile(r"(?i)<script|<foreignObject|javascript:")
     for svg in ROOT.rglob("*.svg"):
+        if is_runtime_path(svg):
+            continue
         validation.require(
             active_svg.search(svg.read_text(encoding="utf-8")) is None,
             f"{svg.relative_to(ROOT)} contains active SVG content",

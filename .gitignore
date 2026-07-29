@@ -7,3 +7,5 @@ venv/
 node_modules/
 *.log
 *.annotated.md
+.interlinear-web/
+papers/
