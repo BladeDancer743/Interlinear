@@ -121,6 +121,20 @@ paper-short-title_YYYY-MM-DD_annotated.md
 
 Write to the user's requested directory or current workspace.
 
+Wrap each source unit that will be machine-checked with:
+
+```markdown
+<!-- interlinear-source:start -->
+> Annotated source passage.
+<!-- interlinear-source:end -->
+```
+
+Keep the exact unannotated passage separately and validate one source unit at a
+time with `<interlinear-skill-dir>/scripts/validate_annotation.py`. Resolve
+`<interlinear-skill-dir>` from the directory containing this Skill's
+`SKILL.md`. The markers are HTML comments and remain invisible in rendered
+Markdown.
+
 ## Confidence and consistency
 
 Use:

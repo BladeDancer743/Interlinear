@@ -125,6 +125,27 @@ Choose one:
 
 For export, write to the user's requested directory or the current workspace. Never hardcode a personal path.
 
+For exported Markdown, or whenever exact source fidelity matters, delimit the
+annotated source unit with invisible markers:
+
+```markdown
+<!-- interlinear-source:start -->
+> Source text with term【中文翻译：当前语境中的作用】.
+<!-- interlinear-source:end -->
+```
+
+Keep the exact unannotated passage in a separate UTF-8 file, then run:
+
+```bash
+python <interlinear-skill-dir>/scripts/validate_annotation.py \
+  source.txt annotated.md --require-summary
+```
+
+The bundled validator checks source fidelity after removing notes, annotation
+shape, delimiter balance, protected code/math spans, density, and summary
+counts. Do not claim the output passed machine validation unless the command
+actually ran. Validate one source unit at a time.
+
 Always finish a substantial section with:
 
 ```text
@@ -151,6 +172,10 @@ Before delivery, verify:
 - Unverified claims carry a confidence marker.
 - At least half of each paragraph remains uninterrupted source text.
 - The response does not reproduce more source text than the task and source rights allow.
+
+When the filesystem and a legally usable source excerpt are available, run the
+bundled validator for exported or high-stakes output. Fix every reported error;
+treat warnings as review prompts rather than automatic failures.
 
 If five or more important candidates were omitted by density control, list them at the end and offer targeted follow-up annotations.
 

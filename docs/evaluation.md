@@ -8,6 +8,7 @@ Run:
 
 ```bash
 python scripts/validate_skill.py
+python -m unittest discover -s tests -v
 ```
 
 The validator checks:
@@ -19,6 +20,17 @@ The validator checks:
 - source-controlled terminology metrics;
 - hardcoded personal paths;
 - active content in repository SVG files.
+
+For an actual exported source unit, run:
+
+```bash
+python interlinear/scripts/validate_annotation.py \
+  source.txt annotated.md --require-summary
+```
+
+This checks that removing `【…】` recovers the normalized source exactly, then
+checks annotation shape, delimiter balance, protected spans, per-sentence
+density, and summary counts. Use `--json` when another tool needs the report.
 
 ## Forward-test matrix
 

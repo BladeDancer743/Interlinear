@@ -16,6 +16,8 @@ SKILL_FILE = SKILL_DIR / "SKILL.md"
 README = ROOT / "README.md"
 TERM_REFERENCE = SKILL_DIR / "references" / "quantum-terminology.md"
 OPENAI_YAML = SKILL_DIR / "agents" / "openai.yaml"
+ANNOTATION_VALIDATOR = SKILL_DIR / "scripts" / "validate_annotation.py"
+ANNOTATION_TESTS = ROOT / "tests" / "test_validate_annotation.py"
 
 
 class Validation:
@@ -52,6 +54,14 @@ def validate_skill(validation: Validation) -> None:
     validation.require(SKILL_FILE.is_file(), "interlinear/SKILL.md is required")
     validation.require(
         OPENAI_YAML.is_file(), "interlinear/agents/openai.yaml is required"
+    )
+    validation.require(
+        ANNOTATION_VALIDATOR.is_file(),
+        "interlinear/scripts/validate_annotation.py is required",
+    )
+    validation.require(
+        ANNOTATION_TESTS.is_file(),
+        "tests/test_validate_annotation.py is required",
     )
     if not SKILL_FILE.is_file():
         return
@@ -144,6 +154,18 @@ def validate_claims_and_privacy(validation: Validation) -> None:
         validation.require(
             int(metric.group(1)) == term_count,
             f"README claims {metric.group(1)} term families, source contains {term_count}",
+        )
+
+    core_lines = len(SKILL_FILE.read_text(encoding="utf-8").splitlines())
+    line_metric = re.search(r"(\d+) 行核心工作流", readme)
+    validation.require(
+        line_metric is not None, "README must report the core line metric"
+    )
+    if line_metric is not None:
+        validation.require(
+            int(line_metric.group(1)) == core_lines,
+            f"README claims {line_metric.group(1)} core lines, source contains "
+            f"{core_lines}",
         )
 
     private_path_patterns = (

@@ -2,7 +2,7 @@
   <img src="docs/assets/interlinear-hero.svg" alt="Interlinear — read technical papers without leaving the sentence" width="100%">
 </p>
 
-<p align="center"><a href="https://github.com/BladeDancer743/Interlinear/actions/workflows/quality.yml"><img alt="Quality" src="https://img.shields.io/github/actions/workflow/status/BladeDancer743/Interlinear/quality.yml?branch=main&style=flat-square&label=quality"></a> <a href="interlinear/SKILL.md"><img alt="Agent Skill" src="https://img.shields.io/badge/Agent%20Skill-valid-4de1c1?style=flat-square"></a> <a href="CHANGELOG.md"><img alt="Version 4.0.0" src="https://img.shields.io/badge/version-4.0.0-f1c27d?style=flat-square"></a> <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/BladeDancer743/Interlinear?style=flat-square"></a></p>
+<p align="center"><a href="https://github.com/BladeDancer743/Interlinear/actions/workflows/quality.yml"><img alt="Quality" src="https://img.shields.io/github/actions/workflow/status/BladeDancer743/Interlinear/quality.yml?branch=main&style=flat-square&label=quality"></a> <a href="interlinear/SKILL.md"><img alt="Agent Skill" src="https://img.shields.io/badge/Agent%20Skill-valid-4de1c1?style=flat-square"></a> <a href="CHANGELOG.md"><img alt="Version 4.1.0" src="https://img.shields.io/badge/version-4.1.0-f1c27d?style=flat-square"></a> <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/BladeDancer743/Interlinear?style=flat-square"></a></p>
 
 # Interlinear
 
@@ -54,7 +54,8 @@ flowchart LR
     C --> D[按读者水平筛选]
     D --> E[查证并标置信心]
     E --> F[注入中文夹注]
-    F --> G[一致性与遗漏复查]
+    F --> G[机器保真校验]
+    G --> H[一致性与遗漏复查]
 ```
 
 - **三档读者水平**：`basic`、`intermediate`、`advanced`
@@ -62,6 +63,7 @@ flowchart LR
 - **四种交付方式**：行间注释、术语表、逐节阅读、Markdown 导出
 - **64 个量子术语族**：以源码实际可验证数量为准
 - **渐进加载**：只在需要时加载论文获取、注释规则、几何直觉或量子术语参考
+- **机器质量门禁**：自动检查原文保真、夹注格式、密度与统计一致性
 
 ## 安装
 
@@ -104,19 +106,35 @@ https://arxiv.org/abs/1801.00862
 
 长论文默认先建立 thesis map，再逐节交付；不会为了“全文处理”把整个 PDF 粗暴塞进一次上下文。
 
-## v4 的结构
+### 校验导出的注释
+
+把精确原文保存为 `source.txt`，并按 Skill 约定在导出稿中加入不可见的
+source markers，然后运行：
+
+```bash
+python interlinear/scripts/validate_annotation.py \
+  source.txt annotated.md --require-summary
+```
+
+校验器会在移除 `【…】` 后比对原文，同时检查括号、夹注格式、公式/代码保护、
+单句密度和节尾统计。它是零依赖脚本，随 Skill 一起安装。
+
+## v4.1 的结构
 
 ```text
 Interlinear/
 ├── interlinear/                    # 可安装 skill
-│   ├── SKILL.md                    # 164 行核心工作流
+│   ├── SKILL.md                    # 189 行核心工作流
 │   ├── agents/openai.yaml          # Codex UI 元数据
+│   ├── scripts/
+│   │   └── validate_annotation.py  # 注释稿机器验收
 │   └── references/
 │       ├── annotation-policy.md
 │       ├── geometric-intuition.md
 │       ├── paper-acquisition.md
 │       └── quantum-terminology.md
 ├── scripts/validate_skill.py       # 结构、链接、隐私与指标校验
+├── tests/                          # 注释校验器回归测试
 ├── docs/                           # 设计、评测与扩展文档
 └── .github/                        # CI 与社区协作入口
 ```
@@ -132,6 +150,7 @@ Interlinear 会：
 - 对未核实内容标记 `⚠️推断` 或 `🔍待核`；
 - 区分几何类比与真实物理机制；
 - 控制注释密度并进行二次遗漏扫描。
+- 对导出稿执行可复现的原文保真与输出契约校验。
 
 Interlinear 不会：
 
@@ -143,7 +162,7 @@ Interlinear 不会：
 
 ## 项目状态
 
-`v4.0.0` 是一次结构升级：skill 已适配跨 agent 发现规范并通过自动校验，但真实论文覆盖仍在持续扩大。
+`v4.1.0` 在跨 agent 的 v4 结构上加入了注释稿机器质量门禁；真实论文覆盖仍在持续扩大。
 
 当前重点：
 

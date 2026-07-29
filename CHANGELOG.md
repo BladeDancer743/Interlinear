@@ -2,6 +2,25 @@
 
 All notable changes to the Interlinear skill will be documented in this file.
 
+## [4.1.0] — 2026-07-29
+
+### Added
+
+- Zero-dependency annotation validator inside the installable Skill
+- Exact normalized source-fidelity comparison after removing `【…】` notes
+- Checks for annotation shape, delimiters, protected code/math spans, density,
+  and section-summary counts
+- Machine-readable JSON reports for agent and CI integration
+- Eight regression tests covering valid output, CLI JSON, and representative
+  failures
+
+### Changed
+
+- Exported Markdown now supports invisible source-unit markers
+- Skill, evaluation, architecture, release, and README guidance now include the
+  executable validation pass
+- GitHub Actions now runs annotation-validator regression tests
+
 ## [4.0.0] — 2026-07-28
 
 ### Added

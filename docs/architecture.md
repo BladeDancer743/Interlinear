@@ -36,6 +36,7 @@ The core skill stays below 500 lines. References are one hop away and have expli
 | Selection | Candidates + reader level | Ranked annotation set |
 | Verification | Paper, references, primary sources | Explanation + confidence |
 | Injection | Source passage + explanations | Preserved text with inline notes |
+| Machine validation | Source + annotated unit | Fidelity and output-contract report |
 | Quality pass | Annotated section | Consistency and omission report |
 
 ## Trust model

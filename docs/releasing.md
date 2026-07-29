@@ -10,6 +10,7 @@ Interlinear releases the repository and the installable `interlinear/` skill tog
 
    ```bash
    python scripts/validate_skill.py
+   python -m unittest discover -s tests -v
    ```
 
 4. Run the skill-creator validator when available:
@@ -34,12 +35,13 @@ Use semantic versioning for the skill contract:
 
 - **major**: breaking layout, invocation, or output-contract change;
 - **minor**: new mode, domain reference, or compatible behavior;
-- **patch**: terminology correction, documentation fix, or validation improvement.
+- **patch**: terminology correction or documentation fix.
+- **minor** also covers a new compatible executable validation capability.
 
 ## Publish
 
 1. Merge or push the release commit to `main`.
-2. Create an annotated tag such as `v4.0.0`.
+2. Create an annotated tag matching the changelog version.
 3. Create a GitHub Release from the matching changelog section.
 4. Verify the public install command against the tag and default branch.
 5. Inspect the rendered README and release page while signed out.
