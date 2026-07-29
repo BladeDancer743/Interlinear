@@ -6,23 +6,34 @@ import os
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from . import __version__, caj
 from .store import DocumentError, DocumentNotFound, DocumentStore
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-MAX_UPLOAD_BYTES = int(
-    os.environ.get("INTERLINEAR_MAX_UPLOAD_MB", "512")
-) * 1024 * 1024
+MAX_UPLOAD_BYTES = int(os.environ.get("INTERLINEAR_MAX_UPLOAD_MB", "512")) * 1024 * 1024
+
+
+class AnnotationCreate(BaseModel):
+    page: int = Field(ge=1)
+    quote: str = Field(min_length=1, max_length=5000)
+    note: str = Field(min_length=1, max_length=10000)
+    confidence: str = Field(default="verified", max_length=20)
+
+
+class AnnotationUpdate(BaseModel):
+    note: str = Field(min_length=1, max_length=10000)
+    confidence: str = Field(default="verified", max_length=20)
 
 
 def create_app(store: DocumentStore | None = None) -> FastAPI:
     document_store = store or DocumentStore()
     application = FastAPI(
-        title="Interlinear Paper Workbench",
+        title="Interlinear Web Workbench",
         version=__version__,
         docs_url="/api/docs",
         redoc_url=None,
@@ -50,6 +61,7 @@ def create_app(store: DocumentStore | None = None) -> FastAPI:
     async def health() -> dict[str, object]:
         return {
             "status": "ok",
+            "surface": "web",
             "version": __version__,
             "local_only": True,
             "pdf": {"available": True, "engine": "PyMuPDF"},
@@ -130,6 +142,75 @@ def create_app(store: DocumentStore | None = None) -> FastAPI:
         results = document_store.search(document_id, q)
         return {"query": q, "results": results, "count": len(results)}
 
+    @application.get("/api/documents/{document_id}/annotations")
+    async def annotations(
+        document_id: str,
+        page: int | None = Query(default=None, ge=1),
+    ) -> dict[str, object]:
+        items = document_store.list_annotations(document_id, page)
+        total = (
+            len(document_store.list_annotations(document_id))
+            if page is not None
+            else len(items)
+        )
+        return {"items": items, "count": len(items), "total": total}
+
+    @application.post(
+        "/api/documents/{document_id}/annotations",
+        status_code=201,
+    )
+    async def create_annotation(
+        document_id: str,
+        payload: AnnotationCreate,
+    ) -> dict[str, object]:
+        item = document_store.create_annotation(
+            document_id,
+            page_number=payload.page,
+            quote=payload.quote,
+            note=payload.note,
+            confidence=payload.confidence,
+        )
+        return {"annotation": item}
+
+    @application.patch("/api/documents/{document_id}/annotations/{annotation_id}")
+    async def update_annotation(
+        document_id: str,
+        annotation_id: str,
+        payload: AnnotationUpdate,
+    ) -> dict[str, object]:
+        item = document_store.update_annotation(
+            document_id,
+            annotation_id,
+            note=payload.note,
+            confidence=payload.confidence,
+        )
+        return {"annotation": item}
+
+    @application.delete(
+        "/api/documents/{document_id}/annotations/{annotation_id}",
+        status_code=204,
+    )
+    async def delete_annotation(
+        document_id: str,
+        annotation_id: str,
+    ) -> Response:
+        document_store.delete_annotation(document_id, annotation_id)
+        return Response(status_code=204)
+
+    @application.get(
+        "/api/documents/{document_id}/annotations.pdf",
+        response_class=FileResponse,
+    )
+    async def annotated_pdf(document_id: str) -> FileResponse:
+        metadata = document_store.get(document_id)
+        path = document_store.export_annotated_pdf(document_id)
+        stem = Path(str(metadata["original_name"])).stem
+        return FileResponse(
+            path,
+            media_type="application/pdf",
+            filename=f"{stem}-interlinear.pdf",
+        )
+
     @application.get(
         "/api/documents/{document_id}/source",
         response_class=FileResponse,
@@ -164,6 +245,3 @@ def _error_response(status: int, code: str, message: str):
         status_code=status,
         content={"detail": {"code": code, "message": message}},
     )
-
-
-app = create_app()

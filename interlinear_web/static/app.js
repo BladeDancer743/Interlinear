@@ -4,6 +4,12 @@ const state = {
   document: null,
   page: 1,
   pageData: null,
+  annotations: [],
+  annotationTotal: 0,
+  activeAnnotationId: null,
+  selectedText: "",
+  layoutPreference: "auto",
+  layoutDecision: { mode: "none", reason: "empty" },
   zoom: 100,
   renderDpi: 160,
   loadToken: 0,
@@ -13,6 +19,21 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 const elements = {
+  addFromSelection: $("#add-from-selection"),
+  annotationCount: $("#annotation-count"),
+  annotationDialog: $("#annotation-dialog"),
+  annotationDialogTitle: $("#annotation-dialog-title"),
+  annotationDock: $("#annotation-dock"),
+  annotationEmpty: $("#annotations-empty"),
+  annotationForm: $("#annotation-form"),
+  annotationHeading: $("#annotation-heading"),
+  annotationId: $("#annotation-id"),
+  annotationLayer: $("#annotation-layer"),
+  annotationLayoutNote: $("#annotation-layout-note"),
+  annotationList: $("#annotation-list"),
+  annotationNote: $("#annotation-note"),
+  annotationQuote: $("#annotation-quote"),
+  annotationConfidence: $("#annotation-confidence"),
   cajCapability: $("#caj-capability"),
   cajDetail: $("#caj-detail"),
   cajDialog: $("#caj-dialog"),
@@ -20,14 +41,18 @@ const elements = {
   documentCount: $("#document-count"),
   documentList: $("#document-list"),
   dropzone: $("#dropzone"),
+  exportAnnotations: $("#export-annotations"),
   figureList: $("#figure-list"),
   figuresEmpty: $("#figures-empty"),
   fileInput: $("#file-input"),
   inspector: $("#inspector"),
   libraryPanel: $("#library-panel"),
   libraryPath: $("#library-path"),
+  layoutMode: $("#layout-mode"),
+  layoutStatus: $("#layout-status"),
   metadata: $("#metadata"),
   nextPage: $("#next-page"),
+  newAnnotation: $("#new-annotation"),
   openPdf: $("#open-pdf"),
   outlineEmpty: $("#outline-empty"),
   outlineList: $("#outline-list"),
@@ -36,6 +61,7 @@ const elements = {
   pageLoader: $("#page-loader"),
   pageNumber: $("#page-number"),
   pageSize: $("#page-size"),
+  pageStage: $("#page-stage"),
   pageText: $("#page-text"),
   pageTotal: $("#page-total"),
   pageViewport: $("#page-viewport"),
@@ -169,14 +195,22 @@ async function openDocument(documentId) {
     state.document = payload.document;
     state.page = 1;
     state.zoom = 100;
+    state.annotations = [];
+    state.annotationTotal = 0;
+    state.activeAnnotationId = null;
+    state.selectedText = "";
     elements.welcome.hidden = true;
     elements.pageCanvas.hidden = false;
     elements.searchInput.disabled = false;
     elements.pageNumber.disabled = false;
+    elements.layoutMode.disabled = false;
+    elements.newAnnotation.disabled = false;
     elements.pageTotal.textContent = state.document.page_count;
     elements.pageNumber.max = state.document.page_count;
     elements.toolbarTitle.textContent = state.document.title;
     elements.openPdf.href = `/api/documents/${state.document.id}/pdf`;
+    elements.exportAnnotations.href =
+      `/api/documents/${state.document.id}/annotations.pdf`;
     [elements.zoomIn, elements.zoomOut, elements.zoomReset].forEach(
       (button) => (button.disabled = false),
     );
@@ -215,12 +249,22 @@ async function loadPage(number, resetScroll = false) {
   const token = ++state.loadToken;
   elements.pageLoader.hidden = false;
   try {
-    const payload = await request(
-      `/api/documents/${state.document.id}/pages/${bounded}`,
-    );
+    const [payload, annotationPayload] = await Promise.all([
+      request(`/api/documents/${state.document.id}/pages/${bounded}`),
+      request(
+        `/api/documents/${state.document.id}/annotations?page=${bounded}`,
+      ),
+    ]);
     if (token !== state.loadToken) return;
     state.page = bounded;
     state.pageData = payload.page;
+    state.selectedText = "";
+    elements.addFromSelection.disabled = true;
+    state.annotations = annotationPayload.items;
+    state.annotationTotal = annotationPayload.total ?? annotationPayload.count;
+    if (!state.annotations.some((item) => item.id === state.activeAnnotationId)) {
+      state.activeAnnotationId = state.annotations[0]?.id || null;
+    }
     elements.pageNumber.value = bounded;
     elements.previousPage.disabled = bounded <= 1;
     elements.nextPage.disabled = bounded >= state.document.page_count;
@@ -232,6 +276,7 @@ async function loadPage(number, resetScroll = false) {
     applyZoom();
     renderPageText();
     renderFigures();
+    renderAnnotationInspector();
     elements.pageSize.textContent =
       `${Math.round(state.pageData.width)} × ${Math.round(state.pageData.height)} pt`;
     $$(".thumbnail").forEach((thumbnail) => {
@@ -258,9 +303,16 @@ function applyZoom() {
   const cssWidth = Math.round(
     state.pageData.width * (96 / 72) * (state.zoom / 100),
   );
-  elements.pageImage.style.width = `${cssWidth}px`;
+  const cssHeight = Math.round(
+    state.pageData.height * (96 / 72) * (state.zoom / 100),
+  );
+  elements.pageStage.style.width = `${cssWidth}px`;
+  elements.pageStage.style.height = `${cssHeight}px`;
+  elements.pageImage.style.width = "100%";
+  elements.pageImage.style.height = "100%";
   elements.zoomReset.textContent = `${state.zoom}%`;
   elements.renderQuality.textContent = `${state.renderDpi} DPI`;
+  renderAnnotations();
 }
 
 function changeZoom(delta) {
@@ -290,6 +342,288 @@ function renderPageText() {
   elements.textEmpty.hidden = Boolean(text);
   elements.pageText.textContent = text;
   elements.copyText.disabled = !text;
+}
+
+function confidenceMeta(confidence) {
+  return {
+    verified: { label: "已核实", symbol: "✓" },
+    inferred: { label: "推断", symbol: "⚠" },
+    pending: { label: "待核", symbol: "◇" },
+  }[confidence] || { label: "已核实", symbol: "✓" };
+}
+
+function layoutLabel(decision) {
+  const modes = {
+    none: "无注释",
+    margin: "页边展开",
+    focus: "锚点聚焦",
+    list: "页后列表",
+  };
+  const reasons = {
+    empty: "当前页无注释",
+    manual: "手动选择",
+    "wide-canvas": "页边空间充足",
+    "limited-side-space": "页边空间有限",
+    "compact-or-dense": "窄屏、长注释或高密度",
+  };
+  return `${modes[decision.mode] || decision.mode} · ${
+    reasons[decision.reason] || decision.reason
+  }`;
+}
+
+function annotationAnchor(item, scaleX, scaleY) {
+  const rects = item.rects || [];
+  if (!rects.length) return { x: 0, y: 0 };
+  const first = rects[0];
+  return {
+    x: first[2] * scaleX,
+    y: ((first[1] + first[3]) / 2) * scaleY,
+  };
+}
+
+function createAnnotationCard(item, index, className = "") {
+  const confidence = confidenceMeta(item.confidence);
+  const article = document.createElement("article");
+  article.className = `annotation-card ${className}`.trim();
+  article.dataset.annotationId = item.id;
+  article.classList.toggle("is-active", item.id === state.activeAnnotationId);
+  article.innerHTML = `
+    <header>
+      <span class="annotation-index">${String(index + 1).padStart(2, "0")}</span>
+      <span class="confidence confidence-${escapeHtml(item.confidence)}">
+        ${confidence.symbol} ${confidence.label}
+      </span>
+    </header>
+    <blockquote>${escapeHtml(item.quote)}</blockquote>
+    <p>${escapeHtml(item.note)}</p>
+    <footer>
+      <button type="button" data-action="edit">编辑</button>
+      <button type="button" data-action="delete">删除</button>
+    </footer>`;
+  article.addEventListener("click", (event) => {
+    if (event.target.closest("button")) return;
+    activateAnnotation(item.id);
+  });
+  article.querySelector('[data-action="edit"]').addEventListener("click", () => {
+    openAnnotationDialog(item);
+  });
+  article.querySelector('[data-action="delete"]').addEventListener("click", () => {
+    deleteAnnotation(item);
+  });
+  return article;
+}
+
+function renderAnnotationInspector() {
+  const count = state.annotations.length;
+  elements.annotationCount.textContent = count;
+  elements.annotationHeading.textContent = `PAGE ${state.page} · NOTES`;
+  elements.annotationEmpty.hidden = count > 0;
+  elements.annotationList.innerHTML = "";
+  state.annotations.forEach((item, index) => {
+    elements.annotationList.append(createAnnotationCard(item, index));
+  });
+  const hasAnnotations = state.annotationTotal > 0;
+  elements.exportAnnotations.classList.toggle("is-disabled", !hasAnnotations);
+  elements.exportAnnotations.setAttribute(
+    "aria-disabled",
+    String(!hasAnnotations),
+  );
+}
+
+function renderAnnotations() {
+  if (!state.pageData || !elements.pageStage.offsetWidth) return;
+  elements.annotationLayer.innerHTML = "";
+  elements.annotationDock.innerHTML = "";
+  elements.annotationDock.hidden = true;
+  elements.pageCanvas.classList.remove(
+    "layout-margin",
+    "layout-focus",
+    "layout-list",
+  );
+
+  const stageWidth = elements.pageStage.offsetWidth;
+  const stageHeight = elements.pageStage.offsetHeight;
+  const scaleX = stageWidth / state.pageData.width;
+  const scaleY = stageHeight / state.pageData.height;
+  let decision = window.InterlinearLayout.decideAnnotationLayout({
+    preferred: state.layoutPreference,
+    viewportWidth: elements.pageViewport.clientWidth,
+    pageWidth: stageWidth,
+    pageHeight: stageHeight,
+    annotations: state.annotations,
+  });
+  state.layoutDecision = decision;
+
+  const anchors = [];
+  state.annotations.forEach((item, index) => {
+    const anchor = annotationAnchor(item, scaleX, scaleY);
+    anchors.push({ item, index, ...anchor });
+    for (const rect of item.rects || []) {
+      const highlight = document.createElement("button");
+      highlight.type = "button";
+      highlight.className = "annotation-highlight";
+      highlight.classList.toggle("is-active", item.id === state.activeAnnotationId);
+      highlight.style.left = `${rect[0] * scaleX}px`;
+      highlight.style.top = `${rect[1] * scaleY}px`;
+      highlight.style.width = `${Math.max(8, (rect[2] - rect[0]) * scaleX)}px`;
+      highlight.style.height = `${Math.max(8, (rect[3] - rect[1]) * scaleY)}px`;
+      highlight.title = item.note;
+      highlight.addEventListener("click", () => activateAnnotation(item.id));
+      elements.annotationLayer.append(highlight);
+    }
+
+    const marker = document.createElement("button");
+    marker.type = "button";
+    marker.className = "annotation-marker";
+    marker.classList.toggle("is-active", item.id === state.activeAnnotationId);
+    marker.textContent = String(index + 1);
+    marker.style.left = `${Math.min(stageWidth - 14, anchor.x + 8)}px`;
+    marker.style.top = `${Math.max(0, anchor.y - 11)}px`;
+    marker.title = item.note;
+    marker.addEventListener("click", () => activateAnnotation(item.id));
+    elements.annotationLayer.append(marker);
+  });
+
+  if (decision.mode === "margin") {
+    const callouts = anchors.map(({ item, index, y }) => {
+      const card = createAnnotationCard(item, index, "annotation-callout");
+      elements.annotationLayer.append(card);
+      return {
+        id: item.id,
+        element: card,
+        anchorY: y,
+        height: card.offsetHeight,
+      };
+    });
+    const placements = window.InterlinearLayout.distributeMarginItems(
+      callouts,
+      stageHeight,
+    );
+    if (!placements) {
+      decision = {
+        mode: "focus",
+        reason: "limited-side-space",
+        sideSpace: decision.sideSpace,
+      };
+      callouts.forEach((item) => item.element.remove());
+    } else {
+      placements.forEach((placement) => {
+        placement.element.style.top = `${placement.top}px`;
+      });
+    }
+  }
+
+  if (decision.mode === "focus") {
+    const active =
+      state.annotations.find((item) => item.id === state.activeAnnotationId) ||
+      state.annotations[0];
+    if (active) {
+      const index = state.annotations.indexOf(active);
+      elements.annotationDock.append(
+        createAnnotationCard(active, index, "annotation-focus-card"),
+      );
+      elements.annotationDock.hidden = false;
+    }
+  }
+
+  if (decision.mode === "list") {
+    state.annotations.forEach((item, index) => {
+      elements.annotationDock.append(
+        createAnnotationCard(item, index, "annotation-dock-card"),
+      );
+    });
+    elements.annotationDock.hidden = state.annotations.length === 0;
+  }
+
+  state.layoutDecision = decision;
+  if (decision.mode !== "none") {
+    elements.pageCanvas.classList.add(`layout-${decision.mode}`);
+  }
+  const label = layoutLabel(decision);
+  elements.layoutStatus.textContent = `注释排版 · ${label}`;
+  elements.annotationLayoutNote.textContent =
+    `当前采用“${label}”。自动模式会在缩放或窗口变化后重新判断。`;
+}
+
+function activateAnnotation(annotationId) {
+  state.activeAnnotationId = annotationId;
+  renderAnnotations();
+  renderAnnotationInspector();
+}
+
+function openAnnotationDialog(item = null, quote = "") {
+  if (!state.document) return;
+  elements.annotationForm.reset();
+  elements.annotationId.value = item?.id || "";
+  elements.annotationQuote.value = item?.quote || quote || state.selectedText;
+  elements.annotationQuote.readOnly = Boolean(item);
+  elements.annotationNote.value = item?.note || "";
+  elements.annotationConfidence.value = item?.confidence || "verified";
+  elements.annotationDialogTitle.textContent = item ? "编辑注释" : "插入注释";
+  elements.annotationDialog.showModal();
+  (item ? elements.annotationNote : elements.annotationQuote).focus();
+}
+
+async function reloadAnnotations() {
+  if (!state.document) return;
+  const payload = await request(
+    `/api/documents/${state.document.id}/annotations?page=${state.page}`,
+  );
+  state.annotations = payload.items;
+  state.annotationTotal = payload.total;
+  if (!state.annotations.some((item) => item.id === state.activeAnnotationId)) {
+    state.activeAnnotationId = state.annotations[0]?.id || null;
+  }
+  renderAnnotations();
+  renderAnnotationInspector();
+}
+
+async function saveAnnotation(event) {
+  event.preventDefault();
+  if (!state.document) return;
+  const annotationId = elements.annotationId.value;
+  const payload = {
+    quote: elements.annotationQuote.value,
+    note: elements.annotationNote.value,
+    confidence: elements.annotationConfidence.value,
+    page: state.page,
+  };
+  const url = annotationId
+    ? `/api/documents/${state.document.id}/annotations/${annotationId}`
+    : `/api/documents/${state.document.id}/annotations`;
+  try {
+    const response = await request(url, {
+      method: annotationId ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        annotationId
+          ? { note: payload.note, confidence: payload.confidence }
+          : payload,
+      ),
+    });
+    state.activeAnnotationId = response.annotation.id;
+    elements.annotationDialog.close();
+    await reloadAnnotations();
+    activateTab("annotations");
+    showToast(annotationId ? "注释已更新" : "注释已插入并定位");
+  } catch (error) {
+    showToast(error.message, true);
+  }
+}
+
+async function deleteAnnotation(item) {
+  if (!window.confirm(`删除这条注释？\n\n${item.note}`)) return;
+  try {
+    await request(
+      `/api/documents/${state.document.id}/annotations/${item.id}`,
+      { method: "DELETE" },
+    );
+    if (state.activeAnnotationId === item.id) state.activeAnnotationId = null;
+    await reloadAnnotations();
+    showToast("注释已删除");
+  } catch (error) {
+    showToast(error.message, true);
+  }
 }
 
 function renderFigures() {
@@ -462,6 +796,27 @@ elements.zoomReset.addEventListener("click", () => {
   state.renderDpi = 160;
   applyZoom();
 });
+elements.layoutMode.addEventListener("change", () => {
+  state.layoutPreference = elements.layoutMode.value;
+  renderAnnotations();
+});
+elements.newAnnotation.addEventListener("click", () => openAnnotationDialog());
+elements.addFromSelection.addEventListener("click", () => {
+  openAnnotationDialog(null, state.selectedText);
+});
+elements.annotationForm.addEventListener("submit", saveAnnotation);
+$("#annotation-dialog-close").addEventListener("click", () =>
+  elements.annotationDialog.close(),
+);
+$("#annotation-cancel").addEventListener("click", () =>
+  elements.annotationDialog.close(),
+);
+elements.exportAnnotations.addEventListener("click", (event) => {
+  if (elements.exportAnnotations.getAttribute("aria-disabled") === "true") {
+    event.preventDefault();
+    showToast("当前文档还没有可导出的注释", true);
+  }
+});
 elements.copyText.addEventListener("click", async () => {
   await navigator.clipboard.writeText(state.pageData?.text || "");
   showToast("当前页正文已复制");
@@ -498,6 +853,21 @@ elements.dropzone.addEventListener("drop", (event) => {
   importFile(event.dataTransfer.files[0]);
 });
 
+document.addEventListener("selectionchange", () => {
+  const selection = window.getSelection();
+  const anchor = selection?.anchorNode;
+  const insidePageText =
+    anchor &&
+    elements.pageText.contains(
+      anchor.nodeType === Node.ELEMENT_NODE ? anchor : anchor.parentElement,
+    );
+  const selected = insidePageText
+    ? selection.toString().replace(/\s+/g, " ").trim().slice(0, 5000)
+    : "";
+  state.selectedText = selected;
+  elements.addFromSelection.disabled = !selected;
+});
+
 document.addEventListener("keydown", (event) => {
   const modifier = navigator.platform.includes("Mac") ? event.metaKey : event.ctrlKey;
   if (modifier && event.key.toLowerCase() === "k") {
@@ -510,6 +880,12 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "+" || event.key === "=") changeZoom(20);
   if (event.key === "-") changeZoom(-20);
 });
+
+let resizeFrame = 0;
+new ResizeObserver(() => {
+  cancelAnimationFrame(resizeFrame);
+  resizeFrame = requestAnimationFrame(renderAnnotations);
+}).observe(elements.pageViewport);
 
 Promise.all([loadHealth(), loadDocuments()]).catch((error) => {
   showToast(`本地服务连接失败：${error.message}`, true);

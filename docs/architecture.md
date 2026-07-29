@@ -10,6 +10,18 @@ Interlinear separates the agent's always-loaded decision process from domain mat
 4. Keep explanation density controllable.
 5. Remain portable across agent runtimes.
 6. Keep private papers and page renders on the reader's machine.
+7. Keep terminal execution and the Web application independently launchable.
+
+## Surface boundary
+
+| Surface | Explicit entry | Owns | Must not do |
+|:--|:--|:--|:--|
+| Terminal Skill | Invoke `$interlinear` in an agent | Paper reading, textual inline notes, glossaries, section delivery, Markdown export | Start a server, open a browser, access the Web library, or write PDF-coordinate annotations |
+| Web workbench | Run `python -m interlinear_web` | Local document library, page rendering, coordinate highlights, adaptive card layout, native PDF annotation export | Invoke an agent Skill or depend on terminal conversation state |
+
+There is no automatic state bridge between the two surfaces. A user may
+explicitly copy terminal notes into Web or ask Web to export its own
+annotations, but launching one surface never launches or mutates the other.
 
 ## Progressive loading
 
@@ -27,7 +39,7 @@ flowchart TD
 
 The core skill stays below 500 lines. References are one hop away and have explicit routing rules in `SKILL.md`.
 
-## Processing pipeline
+## Terminal pipeline
 
 | Stage | Input | Output |
 |:--|:--|:--|
@@ -65,6 +77,9 @@ flowchart LR
     API --> S[Private content-addressed library]
     S --> P[PyMuPDF extraction]
     P --> R[PNG page cache]
+    U --> L[Layout decision engine]
+    API --> A[Coordinate annotation store]
+    A --> E[Native PDF annotation export]
     C[Optional CAJ converter] -->|normalized PDF| S
 ```
 
@@ -72,6 +87,18 @@ The browser never receives a remote asset dependency. FastAPI serves the UI,
 document metadata, page text, search results, and page images from the same
 local origin. PyMuPDF opens a fresh document handle per operation so requests
 do not share mutable PDF state.
+
+The module entry point starts Uvicorn with an ASGI factory. Importing
+`interlinear_web.app` does not create the Web library; state creation begins
+only when Web is explicitly launched or `create_app()` is explicitly called.
+
+Annotation text is persisted in a sidecar JSON file. Source selections are
+resolved to PDF rectangles, so the browser can change presentation without
+changing the source page. The layout engine uses viewport width, rendered-page
+size, note count, note length, and estimated card height to choose margin,
+focus, or list mode. Export creates a new PDF with standard highlight/comment
+objects and leaves the imported file unchanged. See
+[`annotation-layout.md`](annotation-layout.md) for the Web-only decision rules.
 
 CAJ conversion is an explicit adapter boundary because CAJ is proprietary and
 has incompatible internal variants. A configured command is tokenized and

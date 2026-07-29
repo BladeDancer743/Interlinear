@@ -2,7 +2,7 @@
   <img src="docs/assets/interlinear-hero.svg" alt="Interlinear — read technical papers without leaving the sentence" width="100%">
 </p>
 
-<p align="center"><a href="https://github.com/BladeDancer743/Interlinear/actions/workflows/quality.yml"><img alt="Quality" src="https://img.shields.io/github/actions/workflow/status/BladeDancer743/Interlinear/quality.yml?branch=main&style=flat-square&label=quality"></a> <a href="interlinear/SKILL.md"><img alt="Agent Skill" src="https://img.shields.io/badge/Agent%20Skill-valid-4de1c1?style=flat-square"></a> <a href="CHANGELOG.md"><img alt="Version 4.2.0" src="https://img.shields.io/badge/version-4.2.0-f1c27d?style=flat-square"></a> <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/BladeDancer743/Interlinear?style=flat-square"></a></p>
+<p align="center"><a href="https://github.com/BladeDancer743/Interlinear/actions/workflows/quality.yml"><img alt="Quality" src="https://img.shields.io/github/actions/workflow/status/BladeDancer743/Interlinear/quality.yml?branch=main&style=flat-square&label=quality"></a> <a href="interlinear/SKILL.md"><img alt="Agent Skill" src="https://img.shields.io/badge/Agent%20Skill-valid-4de1c1?style=flat-square"></a> <a href="CHANGELOG.md"><img alt="Version 4.3.0" src="https://img.shields.io/badge/version-4.3.0-f1c27d?style=flat-square"></a> <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/BladeDancer743/Interlinear?style=flat-square"></a></p>
 
 # Interlinear
 
@@ -12,7 +12,17 @@ Interlinear 是一个跨 agent 的论文阅读 skill。它识别缩写、符号�
 
 它首先服务量子计算论文，也能通过上下文发现机制处理物理、计算机科学和其他技术领域。
 
-从 `v4.2` 开始，仓库还提供一个完全本地的论文工作台：中央查看保留公式、版式和插图的高清原页，右侧同步查看正文、目录、位图信息和文档元数据。
+仓库同时提供终端 Skill 和完全本地的 Web 论文工作台，但两者是独立入口：安装或调用 Skill 不会启动 Web，启动 Web 也不会读取终端对话。
+
+## 两个独立入口
+
+| 入口 | 启动方式 | 负责 |
+|:--|:--|:--|
+| 终端 / 对话 Skill | 在 agent 中调用 `$interlinear` | 论文阅读、行间注释、术语表、逐节交付、Markdown 导出 |
+| Web 工作台 | 显式运行 `python -m interlinear_web` | 高清原页、坐标高亮、注释卡片、自动排版、原生 PDF 批注导出 |
+
+两个入口不会自动启动、读取或修改对方的状态。需要把终端注释带到
+Web 时，由用户显式复制或重新创建。
 
 ## 30 秒看懂
 
@@ -62,12 +72,12 @@ flowchart LR
 
 - **三档读者水平**：`basic`、`intermediate`、`advanced`
 - **两种解释风格**：定义式、几何直觉式
-- **四种交付方式**：行间注释、术语表、逐节阅读、Markdown 导出
+- **终端四种交付方式**：行间注释、术语表、逐节阅读、Markdown 导出
 - **64 个量子术语族**：以源码实际可验证数量为准
 - **渐进加载**：只在需要时加载论文获取、注释规则、几何直觉或量子术语参考
 - **机器质量门禁**：自动检查原文保真、夹注格式、密度与统计一致性
 
-## 安装
+## 终端 Skill 安装
 
 ### 推荐：Skills CLI
 
@@ -89,7 +99,7 @@ npx skills add BladeDancer743/Interlinear --skill interlinear -g -a opencode
 
 复制 [`interlinear/`](interlinear/) 整个目录到对应 agent 的 skills 目录，并保持目录名为 `interlinear`。
 
-## 使用
+## 终端 / 对话端使用
 
 直接给论文、章节或片段：
 
@@ -108,9 +118,11 @@ https://arxiv.org/abs/1801.00862
 
 长论文默认先建立 thesis map，再逐节交付；不会为了“全文处理”把整个 PDF 粗暴塞进一次上下文。
 
-## 本地论文工作台
+## Web 端：本地论文工作台
 
-Web 工作台属于仓库应用层，不会增加 agent 每次调用 Skill 时的上下文负担。它默认只监听 `127.0.0.1`，页面渲染、文本提取、全文搜索与文件缓存都在本机完成。
+Web 工作台属于独立应用层，必须显式启动，不会增加 agent 每次调用
+Skill 时的上下文负担，也不会读取终端会话。它默认只监听
+`127.0.0.1`，页面渲染、文本提取、全文搜索与文件缓存都在本机完成。
 
 <p align="center">
   <img src="docs/assets/paper-workbench.png" alt="Interlinear 本地论文工作台：完整原页、缩略图与矢量信息面板" width="100%">
@@ -119,6 +131,8 @@ Web 工作台属于仓库应用层，不会增加 agent 每次调用 Skill 时�
 ```text
 本地文档库 → 高清原页 + 页面缩略图
           ├→ 可检索正文
+          ├→ 坐标高亮 + 中文注释
+          ├→ 自适应页边 / 聚焦 / 列表排版
           ├→ PDF 目录与元数据
           └→ 嵌入位图与矢量绘制信息
 ```
@@ -140,9 +154,21 @@ Windows PowerShell 也可以直接使用虚拟环境中的 Python：
 
 浏览器会打开 `http://127.0.0.1:8765`。导入后的文件和渲染缓存保存在 Git 忽略的 `.interlinear-web/`，不会上传到任何远程服务。
 
+### 插入注释与自动排版
+
+在右侧“正文”中选择一段连续原文，点击“选中后加注”，写入中文解释并选择已核实、推断或待核状态。工作台会把选区映射回 PDF 坐标，并使用稳定编号关联原文与注释卡。
+
+自动排版决策器会在页面缩放或窗口变化后重新判断：
+
+- **页边**：空间充足、注释不密集时，全部卡片沿页边避碰展开；
+- **聚焦**：页边空间有限时，保留所有锚点，只展开当前注释；
+- **列表**：窄屏、长注释或高密度页面，把注释放在页面下方。
+
+工具栏可以覆盖自动选择。下载按钮会生成一份新的 PDF，使用标准高亮与评论批注，不会修改导入的原文件。
+
 ### PDF 与 CAJ 边界
 
-- **PDF**：内置支持。可按 72–300 DPI 查看完整原页，并提取正文、目录、链接数、嵌入位图和矢量绘制信息。
+- **PDF**：内置支持。可按 72–300 DPI 查看完整原页，提取正文、目录、链接数、嵌入位图和矢量绘制信息，并导出标准高亮/评论批注。
 - **CAJ**：界面可直接接收，但转换由本机可用的 `caj2pdf` 或用户指定转换器完成。
 - **CAJ 变体**：CAJ/HN 等内部格式兼容性并不统一；转换失败时，工作台会显示真实错误，不会假装已经解析。
 - **保底路径**：可在 CAJViewer 中使用“打印为 PDF”，再把 PDF 导入工作台。
@@ -169,12 +195,12 @@ python interlinear/scripts/validate_annotation.py \
 校验器会在移除 `【…】` 后比对原文，同时检查括号、夹注格式、公式/代码保护、
 单句密度和节尾统计。它是零依赖脚本，随 Skill 一起安装。
 
-## v4.2 的结构
+## v4.3 的结构
 
 ```text
 Interlinear/
 ├── interlinear/                    # 可安装 skill
-│   ├── SKILL.md                    # 189 行核心工作流
+│   ├── SKILL.md                    # 202 行核心工作流
 │   ├── agents/openai.yaml          # Codex UI 元数据
 │   ├── scripts/
 │   │   └── validate_annotation.py  # 注释稿机器验收
@@ -185,12 +211,14 @@ Interlinear/
 │       └── quantum-terminology.md
 ├── interlinear_web/                # 本地 PDF / CAJ 论文工作台
 │   ├── app.py                      # 本地 API 与静态界面
-│   ├── store.py                    # 私有文档库、提取与渲染
+│   ├── store.py                    # 私有文档库、提取、注释与渲染
 │   ├── caj.py                      # 可选 CAJ 转换器适配层
 │   └── static/                     # 离线前端
 ├── scripts/validate_skill.py       # 结构、链接、隐私与指标校验
 ├── tests/                          # Skill、PDF、CAJ 与 API 回归测试
-├── docs/                           # 设计、评测与扩展文档
+├── docs/
+│   ├── annotation-layout.md        # Web 专属排版决策
+│   └── ...                         # 设计、评测与扩展文档
 └── .github/                        # CI 与社区协作入口
 ```
 
@@ -209,6 +237,8 @@ Interlinear 会：
 
 Interlinear 不会：
 
+- 调用终端 Skill 时自动启动 Web 服务；
+- 启动 Web 时读取或修改终端对话状态；
 - 绕过付费墙；
 - 把抓取到的受版权保护论文全文重新发布；
 - 把逻辑量子比特描述为“无错”；
@@ -217,7 +247,7 @@ Interlinear 不会：
 
 ## 项目状态
 
-`v4.2.0` 加入了本地 PDF / CAJ 论文工作台，同时保持 `interlinear/` Skill 的便携性和上下文效率。
+`v4.3.0` 加入了坐标锚定注释、原生 PDF 批注导出和自适应排版决策器，并明确隔离终端 Skill 与 Web 工作台的启动、依赖和状态边界。
 
 当前重点：
 
@@ -232,6 +262,7 @@ Interlinear 不会：
 
 - [设计与架构](docs/architecture.md)
 - [本地论文工作台](docs/web-workbench.md)
+- [Web 注释排版](docs/annotation-layout.md)
 - [评测方法](docs/evaluation.md)
 - [扩展新领域](docs/extending-domains.md)
 - [发布流程](docs/releasing.md)

@@ -82,6 +82,10 @@ Place the note after the complete term and before following punctuation.
 
 ## Output formats
 
+These formats belong to the terminal/chat surface. Keep the output textual.
+When the requested result depends on PDF coordinates or visual page layout,
+hand off to the separately launched Web workbench.
+
 ### Inline
 
 Use for a short passage:

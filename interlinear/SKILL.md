@@ -1,6 +1,6 @@
 ---
 name: interlinear
-description: Annotate English technical papers with concise inline Chinese translations and explanations while preserving the source text and argument. Use when a user asks to read, explain, translate, annotate, or study an academic paper, arXiv preprint, PDF, DOI, technical passage, figure caption, equation, or unfamiliar terminology; supports reader-level adaptation, definition-first and geometric-intuition modes, section-by-section reading, cumulative glossaries, and quantum-computing terminology.
+description: Read and annotate English technical papers in a terminal or chat with concise Chinese translations and explanations while preserving the source text and argument. Use when a user asks to read, explain, translate, annotate, or study an academic paper, arXiv preprint, PDF, DOI, technical passage, figure caption, equation, or unfamiliar terminology; supports reader-level adaptation, inline notes, glossaries, Markdown export, definition-first and geometric-intuition modes, section-by-section reading, and quantum-computing terminology. This text-only Skill does not start or control the separate Interlinear Web workbench.
 ---
 
 # Interlinear
@@ -12,6 +12,19 @@ technical term【中文翻译：它在当前论证中为什么重要】
 ```
 
 Preserve the author's argument. Add a reading layer; do not rewrite the paper into a different claim.
+
+## Keep the surfaces separate
+
+Treat this Skill as the terminal/chat surface:
+
+- Return annotations in the current conversation, terminal, or a requested
+  Markdown file.
+- Accept a PDF as source input, but keep the result textual.
+- Do not start `interlinear_web`, open a browser, access `.interlinear-web`, or
+  create coordinate annotations or native PDF comments.
+- When the user requests fixed-page highlights, draggable cards, visual layout,
+  or annotated-PDF export, hand the task to the separately launched Web
+  workbench instead of simulating that workflow in terminal output.
 
 ## Load only what the task needs
 

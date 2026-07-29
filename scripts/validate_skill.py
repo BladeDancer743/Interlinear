@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import re
 import sys
 from pathlib import Path
@@ -18,6 +19,8 @@ TERM_REFERENCE = SKILL_DIR / "references" / "quantum-terminology.md"
 OPENAI_YAML = SKILL_DIR / "agents" / "openai.yaml"
 ANNOTATION_VALIDATOR = SKILL_DIR / "scripts" / "validate_annotation.py"
 ANNOTATION_TESTS = ROOT / "tests" / "test_validate_annotation.py"
+WEB_LAYOUT = ROOT / "docs" / "annotation-layout.md"
+WEB_PACKAGE = ROOT / "interlinear_web"
 IGNORED_PARTS = {
     ".git",
     ".interlinear-web",
@@ -136,6 +139,69 @@ def validate_skill(validation: Validation) -> None:
             )
 
 
+def validate_surface_boundary(validation: Validation) -> None:
+    skill_text = SKILL_FILE.read_text(encoding="utf-8")
+    policy_text = (SKILL_DIR / "references" / "annotation-policy.md").read_text(
+        encoding="utf-8"
+    )
+    validation.require(
+        "Treat this Skill as the terminal/chat surface" in skill_text,
+        "SKILL.md must declare the terminal/chat surface",
+    )
+    validation.require(
+        "Do not start `interlinear_web`" in skill_text,
+        "SKILL.md must prohibit implicit Web startup",
+    )
+    validation.require(
+        "annotation-layout.md" not in skill_text + policy_text,
+        "the terminal Skill must not load Web layout instructions",
+    )
+    validation.require(
+        not (SKILL_DIR / "references" / "annotation-layout.md").exists(),
+        "Web layout instructions must stay outside the installable Skill",
+    )
+    validation.require(
+        WEB_LAYOUT.is_file(),
+        "docs/annotation-layout.md is required for the Web surface",
+    )
+    validation.require(
+        (WEB_PACKAGE / "static" / "layout.js").is_file(),
+        "the Web layout engine must stay in interlinear_web",
+    )
+    validation.require(
+        (WEB_PACKAGE / "__main__.py").is_file(),
+        "the Web workbench requires its independent module entry point",
+    )
+    for python_file in WEB_PACKAGE.rglob("*.py"):
+        source = python_file.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(python_file))
+        imports_terminal_skill = any(
+            (
+                isinstance(node, ast.Import)
+                and any(
+                    alias.name == "interlinear" or alias.name.startswith("interlinear.")
+                    for alias in node.names
+                )
+            )
+            or (
+                isinstance(node, ast.ImportFrom)
+                and (
+                    node.module == "interlinear"
+                    or str(node.module).startswith("interlinear.")
+                )
+            )
+            for node in ast.walk(tree)
+        )
+        dynamic_import = re.search(
+            r"(?:import_module|__import__)\(\s*['\"]interlinear(?:[.'\"])",
+            source,
+        )
+        validation.require(
+            not imports_terminal_skill and dynamic_import is None,
+            f"{python_file.relative_to(ROOT)} must not import the terminal Skill",
+        )
+
+
 def validate_links(validation: Validation) -> None:
     link_pattern = re.compile(r"!?\[[^\]]*]\(([^)]+)\)")
     for markdown in sorted(ROOT.rglob("*.md")):
@@ -210,6 +276,7 @@ def validate_claims_and_privacy(validation: Validation) -> None:
 def main() -> int:
     validation = Validation()
     validate_skill(validation)
+    validate_surface_boundary(validation)
     validate_links(validation)
     validate_claims_and_privacy(validation)
 

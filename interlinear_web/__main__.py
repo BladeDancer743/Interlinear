@@ -13,7 +13,7 @@ import uvicorn
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Launch the local Interlinear paper workbench."
+        description="Launch the independent local Interlinear Web workbench."
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=8765, type=int)
@@ -25,12 +25,14 @@ def main() -> None:
         os.environ["INTERLINEAR_LIBRARY"] = str(args.library.resolve())
 
     url = f"http://{args.host}:{args.port}"
-    print(f"Interlinear Paper Workbench: {url}")
+    print(f"Interlinear Web Workbench: {url}")
+    print("Web runs independently; the terminal Skill is not started.")
     print("All document processing stays on this machine.")
     if args.open_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     uvicorn.run(
-        "interlinear_web.app:app",
+        "interlinear_web.app:create_app",
+        factory=True,
         host=args.host,
         port=args.port,
         log_level="info",

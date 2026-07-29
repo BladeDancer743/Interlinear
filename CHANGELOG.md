@@ -2,6 +2,33 @@
 
 All notable changes to the Interlinear project will be documented in this file.
 
+## [4.3.0] — 2026-07-29
+
+### Added
+
+- Persistent page annotations anchored to exact PDF coordinates
+- Create, edit, delete, confidence-state, and per-page annotation APIs
+- Adaptive annotation layout engine with margin, focus, and list modes
+- Deterministic margin-card collision avoidance and manual layout override
+- Standard PDF highlight/comment export without modifying the imported source
+- Selection-to-annotation workflow in the local paper workbench
+- Layout-engine, storage, API, and PDF-export regression coverage
+- Portable Skill guidance for fixed-page annotation layout
+
+### Changed
+
+- The inspector now includes a dedicated annotation workspace
+- The paper viewer keeps explanation cards outside original source line boxes
+- Terminal Skill and Web workbench now have explicit, independently launched
+  surface contracts with no automatic state bridge
+- Web layout instructions moved out of the installable Skill and into `docs/`
+- Skill metadata now describes terminal/chat text output only
+- Web health metadata and launch output identify the active surface as Web
+- Web now starts through an ASGI factory, so importing its module does not
+  create a document library
+- Boundary validation now detects static and common dynamic imports of the
+  terminal Skill from Web code
+
 ## [4.2.0] — 2026-07-29
 
 ### Added

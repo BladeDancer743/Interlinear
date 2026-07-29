@@ -87,6 +87,49 @@ class DocumentStoreTests(unittest.TestCase):
         self.assertEqual(first["id"], second["id"])
         self.assertEqual(len(self.store.list()), 1)
 
+    def test_annotations_are_anchored_persisted_and_exported(self) -> None:
+        metadata = self.store.import_path(
+            self.source,
+            "sample.pdf",
+            remove_source=False,
+        )
+        item = self.store.create_annotation(
+            metadata["id"],
+            page_number=1,
+            quote="searchable phrase lives on page one",
+            note="可检索短语：用于验证跨行锚点。",
+            confidence="verified",
+        )
+
+        self.assertEqual(item["page"], 1)
+        self.assertTrue(item["rects"])
+        self.assertEqual(
+            self.store.list_annotations(metadata["id"], 1)[0]["id"],
+            item["id"],
+        )
+
+        updated = self.store.update_annotation(
+            metadata["id"],
+            item["id"],
+            note="更新后的中文注释。",
+            confidence="inferred",
+        )
+        self.assertEqual(updated["confidence"], "inferred")
+
+        exported = self.store.export_annotated_pdf(metadata["id"])
+        with pymupdf.open(exported) as document:
+            annotations = list(document[0].annots() or [])
+            annotation_contents = [
+                str(annotation.info.get("content", "")) for annotation in annotations
+            ]
+        self.assertGreaterEqual(len(annotations), 2)
+        self.assertTrue(
+            any(content.startswith("⚠️推断") for content in annotation_contents)
+        )
+
+        self.store.delete_annotation(metadata["id"], item["id"])
+        self.assertEqual(self.store.list_annotations(metadata["id"]), [])
+
     def test_document_id_rejects_path_traversal(self) -> None:
         with self.assertRaises(DocumentNotFound):
             self.store.get("../../metadata")

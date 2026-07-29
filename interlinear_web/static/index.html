@@ -8,7 +8,7 @@
       name="description"
       content="Interlinear 本地论文工作台：完整查看 PDF 与 CAJ 文档页面、文本和图像信息。"
     >
-    <title>Interlinear · Paper Workbench</title>
+    <title>Interlinear Web · Paper Workbench</title>
     <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/assets/app.css">
   </head>
@@ -21,7 +21,7 @@
           </span>
           <span>
             <strong>Interlinear</strong>
-            <small>Paper Workbench</small>
+            <small>Web Workbench</small>
           </span>
         </a>
 
@@ -109,12 +109,34 @@
 
           <div class="document-title" id="toolbar-title">
             <span>等待导入文档</span>
+            <small id="layout-status">注释排版 · 等待文档</small>
           </div>
 
           <div class="zoom-controls">
+            <label class="layout-select" title="注释排版">
+              <span>排版</span>
+              <select id="layout-mode" disabled>
+                <option value="auto">自动</option>
+                <option value="margin">页边</option>
+                <option value="focus">聚焦</option>
+                <option value="list">列表</option>
+              </select>
+            </label>
             <button class="icon-button" id="zoom-out" title="缩小" disabled>−</button>
             <button class="zoom-value" id="zoom-reset" disabled>100%</button>
             <button class="icon-button" id="zoom-in" title="放大" disabled>＋</button>
+            <a
+              class="icon-button is-disabled"
+              id="export-annotations"
+              href="#"
+              title="导出带原生批注的 PDF"
+              aria-disabled="true"
+            >
+              <svg viewBox="0 0 24 24">
+                <path d="M12 3v12m0 0 4-4m-4 4-4-4"></path>
+                <path d="M5 17v3h14v-3"></path>
+              </svg>
+            </a>
             <a class="icon-button" id="open-pdf" href="#" target="_blank" title="在新窗口打开 PDF">
               <svg viewBox="0 0 24 24">
                 <path d="M14 4h6v6M20 4l-9 9"></path>
@@ -154,7 +176,11 @@
               <span></span><span></span><span></span>
             </div>
             <div class="page-canvas" id="page-canvas" hidden>
-              <img id="page-image" alt="论文页面">
+              <div class="page-stage" id="page-stage">
+                <img id="page-image" alt="论文页面">
+                <div class="annotation-layer" id="annotation-layer"></div>
+              </div>
+              <div class="annotation-dock" id="annotation-dock" hidden></div>
             </div>
           </section>
         </div>
@@ -163,6 +189,9 @@
       <aside class="inspector" id="inspector">
         <div class="inspector-tabs" role="tablist">
           <button class="tab is-active" data-tab="text" role="tab">正文</button>
+          <button class="tab" data-tab="annotations" role="tab">
+            注释 <span id="annotation-count">0</span>
+          </button>
           <button class="tab" data-tab="figures" role="tab">视觉</button>
           <button class="tab" data-tab="outline" role="tab">目录</button>
           <button class="tab" data-tab="info" role="tab">信息</button>
@@ -172,7 +201,10 @@
           <section class="tab-panel is-active" id="panel-text">
             <div class="section-label">
               <span id="text-heading">PAGE TEXT</span>
-              <button class="text-button" id="copy-text" disabled>复制</button>
+              <span class="section-actions">
+                <button class="text-button" id="add-from-selection" disabled>选中后加注</button>
+                <button class="text-button" id="copy-text" disabled>复制</button>
+              </span>
             </div>
             <div class="empty-state" id="text-empty">
               <span>Aa</span>
@@ -180,6 +212,21 @@
             </div>
             <pre class="page-text" id="page-text" hidden></pre>
             <div class="search-results" id="search-results" hidden></div>
+          </section>
+
+          <section class="tab-panel" id="panel-annotations">
+            <div class="section-label">
+              <span id="annotation-heading">PAGE NOTES</span>
+              <button class="text-button" id="new-annotation" disabled>新建</button>
+            </div>
+            <div class="annotation-layout-note" id="annotation-layout-note">
+              自动排版会根据页宽、注释密度和文字长度选择页边、聚焦或列表模式。
+            </div>
+            <div class="empty-state" id="annotations-empty">
+              <span>✦</span>
+              <p>从“正文”中选中原文，再加入中文解释。</p>
+            </div>
+            <div class="annotation-list" id="annotation-list"></div>
           </section>
 
           <section class="tab-panel" id="panel-figures">
@@ -232,6 +279,48 @@
       </p>
     </dialog>
 
+    <dialog class="annotation-dialog" id="annotation-dialog">
+      <form id="annotation-form">
+        <button class="dialog-close" id="annotation-dialog-close" type="button" aria-label="关闭">×</button>
+        <span class="eyebrow">INTERLINEAR NOTE</span>
+        <h2 id="annotation-dialog-title">插入注释</h2>
+        <input id="annotation-id" type="hidden">
+        <label>
+          <span>原文锚点</span>
+          <textarea
+            id="annotation-quote"
+            rows="3"
+            maxlength="5000"
+            placeholder="从右侧正文中选择一段连续原文"
+            required
+          ></textarea>
+        </label>
+        <label>
+          <span>中文注释</span>
+          <textarea
+            id="annotation-note"
+            rows="5"
+            maxlength="10000"
+            placeholder="翻译：它在当前论证中为什么重要"
+            required
+          ></textarea>
+        </label>
+        <label class="confidence-field">
+          <span>置信状态</span>
+          <select id="annotation-confidence">
+            <option value="verified">已核实</option>
+            <option value="inferred">⚠️ 推断</option>
+            <option value="pending">🔍 待核</option>
+          </select>
+        </label>
+        <footer>
+          <button class="secondary-button" id="annotation-cancel" type="button">取消</button>
+          <button class="primary-button" type="submit">保存并定位</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script src="/assets/layout.js"></script>
     <script src="/assets/app.js" defer></script>
   </body>
 </html>
